@@ -3,7 +3,7 @@ import {
   PlusCircle, Trash2, Calendar, Image as ImageIcon, Send, Globe, 
   Briefcase, Cpu, Palette, Upload, ArrowLeft, Home, MessageSquare, User, X,
   Type, AlignLeft, ArrowUp, ArrowDown, Edit, Lock, LogOut, KeyRound,
-  Maximize2, Settings, Sparkles, Loader2
+  Maximize2, Settings, Sparkles, Loader2, AlertTriangle, CheckCircle, FileText
 } from 'lucide-react';
 
 // --- 1. IMPORTACIONES DE FIREBASE ---
@@ -12,9 +12,9 @@ import {
   getFirestore, collection, addDoc, onSnapshot, 
   deleteDoc, doc, updateDoc, arrayUnion, arrayRemove, query, orderBy 
 } from "firebase/firestore";
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "firebase/auth";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, signInAnonymously } from "firebase/auth";
 
-// --- 2. CONFIGURACIÓN DE LA FIREBASE ---
+// --- 2. CONFIGURACIÓN DE FIREBASE ---
 const firebaseConfig = {
   apiKey: "AIzaSyDa8-5p5ZyxZUQ1R303KixjLmnDiFAA-1Y",
   authDomain: "myxd-26265.firebaseapp.com",
@@ -26,10 +26,10 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app); 
 
-// --- NOTA: YA NO HAY CONFIGURACIÓN DE GEMINI AQUÍ ---
-// Las claves ahora viven seguras en Vercel y se acceden vía /api/chat
+// --- NOTA: CONFIGURACIÓN DE GEMINI ELIMINADA DEL FRONTEND ---
+// Las claves ahora están seguras en Vercel. Todo pasa por /api/chat.
 
-// --- RECURSOS EJEMPLO ---
+// --- RECURSOS DE EJEMPLO ---
 const presetImages = [
   { name: "Tecnología", url: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&auto=format&fit=crop&q=60", icon: <Cpu size={16} /> },
   { name: "Negocios", url: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&auto=format&fit=crop&q=60", icon: <Briefcase size={16} /> },
@@ -44,6 +44,12 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false); 
   const [activeAiBlockId, setActiveAiBlockId] = useState(null);
+  const [authError, setAuthError] = useState(null);
+  
+  // ESTADOS DE NOTIFICACIÓN ANIMADA (ENTRADA Y SALIDA)
+  const [notification, setNotification] = useState({ show: false, message: '', type: 'success', isVisible: false });
+  const notificationTimer = useRef(null);
+  const hideTimer = useRef(null);
   
   const [myPosts, setMyPosts] = useState(() => {
     try { return JSON.parse(localStorage.getItem('myPosts') || '[]'); } 
@@ -60,17 +66,17 @@ export default function App() {
   const [showNtrLogo, setShowNtrLogo] = useState(false);
   const [fullScreenImage, setFullScreenImage] = useState(null);
 
-  // Form States (Noticia)
+  // Estados del Formulario (Noticia)
   const [editingId, setEditingId] = useState(null);
   const [title, setTitle] = useState('');
   const [contentBlocks, setContentBlocks] = useState([{ id: Date.now(), type: 'text', value: '' }]);
   const [category, setCategory] = useState('General');
-  const [author, setAuthor] = useState('Redacción NTR');
+  const [author, setAuthor] = useState('Anonimo');
   const [image, setImage] = useState(''); 
   const [isCompressing, setIsCompressing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Form States (Comentarios)
+  // Estados del Formulario (Comentarios)
   const [commentName, setCommentName] = useState('');
   const [commentText, setCommentText] = useState('');
   const [commentImage, setCommentImage] = useState(''); 
@@ -86,6 +92,35 @@ export default function App() {
 
   const ntrBlue = "bg-blue-900"; 
   const ntrText = "text-blue-900";
+
+  // --- LÓGICA PARA MOSTRAR NOTIFICACIONES ---
+  const showNotification = (message, type = 'success') => {
+    // Limpiar temporizadores...
+    if (notificationTimer.current) clearTimeout(notificationTimer.current);
+    if (hideTimer.current) clearTimeout(hideTimer.current);
+
+    // Mostrar componente...
+    setNotification({ show: true, message, type, isVisible: false });
+
+    // Dar tiempo al DOM...
+    setTimeout(() => {
+      setNotification(prev => ({ ...prev, isVisible: true }));
+    }, 50);
+
+    // Ocultar después de 4 segundos
+    notificationTimer.current = setTimeout(() => {
+      closeNotification();
+    }, 4000);
+  };
+
+  const closeNotification = () => {
+    // Iniciar animación de salida
+    setNotification(prev => ({ ...prev, isVisible: false }));
+    // Desmontar componente...
+    hideTimer.current = setTimeout(() => {
+      setNotification(prev => ({ ...prev, show: false }));
+    }, 400); 
+  };
 
   // --- LÓGICA DE BLOQUES ---
   const addTextBlock = () => {
@@ -136,17 +171,14 @@ export default function App() {
     }
   };
 
-  // --- LÓGICA GEMINI (PROXY SEGURO) ---
+  // --- LÓGICA DE GEMINI (PROXY SEGURO CONECTADO A VERCEL) ---
   const callGemini = async (userPrompt) => {
-    const systemPrompt = "Eres un redactor periodístico senior de Zacatecas. Tu tarea es profesionalizar y EXTENDER EXTENSAMENTE el texto. Debes generar un párrafo LARGO y MUY DETALLADO (al menos 150-200 palabras), con tono serio y estilo de crónica. Es VITAL que adaptes tu vocabulario a la sección indicada. Mantén la continuidad con el párrafo anterior si se proporciona contexto. Responde únicamente con el párrafo redactado.";
+    const systemPrompt = "Eres un redactor periodístico senior de Zacatecas. Tu tarea es profesionalizar y EXTENDER EXTENSAMENTE el texto. Debes generar un párrafo LARGO y MUY DETALLADO (al menos 150-200 palabras), con tono serio y estilo de crónica. Es VITAL que adaptes tu vocabulario a la sección indicada (ej: más técnico para Tecnología, formal para Política, crudo pero respetuoso para Seguridad). Mantén la continuidad con el párrafo anterior si se proporciona contexto. Responde únicamente con el párrafo redactado, sin saludos ni comentarios.";
     
-    // Concatenamos la instrucción del sistema con el prompt del usuario
-    // para enviarlo como un solo bloque al servidor
+    // Concatenamos el contexto y la petición para enviarlo al servidor
     const finalPrompt = `${systemPrompt}\n\nCONTEXTO Y TEXTO A MEJORAR:\n${userPrompt}`;
 
     try {
-      // Llamada a TU Backend (Serverless Function en Vercel)
-      // La ruta es relativa: /api/chat busca en el mismo dominio
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -158,17 +190,17 @@ export default function App() {
       }
 
       const data = await response.json();
-      return data.respuesta; // El backend devuelve { respuesta: "texto..." }
-
+      return data.respuesta;
+      
     } catch (err) {
       console.error("Error conectando con el Proxy de IA:", err);
-      return null;
+      throw new Error("PROXY_ERROR");
     }
   };
 
   const handleAiRewriteBlock = async (blockId, currentText) => {
     if (!currentText || currentText.trim().length < 3) {
-      alert("Por favor, escribe una idea inicial para que la IA pueda redactar un párrafo extenso.");
+      showNotification("Escribe una idea inicial para la IA", "error");
       return;
     }
 
@@ -193,11 +225,12 @@ export default function App() {
       
       if (improvedText) {
         updateBlockValue(blockId, improvedText);
+        showNotification("¡Texto mejorado por IA!");
       } else {
-        alert("La IA está saturada o hubo un error de conexión. Intenta de nuevo.");
+        showNotification("La IA no devolvió respuesta. Intenta de nuevo.", "error");
       }
     } catch (error) {
-      alert("No se pudo conectar con el servidor de redacción.");
+      showNotification("Error de conexión con el servidor IA. Revisa tu internet.", "error");
     } finally {
       setActiveAiBlockId(null);
     }
@@ -205,26 +238,25 @@ export default function App() {
 
   // --- EFECTOS ---
   useEffect(() => {
-    const initAuth = async () => {
-      try {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          try {
-            await signInWithCustomToken(auth, __initial_auth_token);
-          } catch (e) {
-            await signInAnonymously(auth);
-          }
-        } else {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        // Usuario conectado...
+        setCurrentUser(user);
+        setIsAdmin(user.email === "admin@ntrzacatecas.com");
+        setAuthError(null);
+      } else {
+        // Usuario desconectado...
+        setCurrentUser(null);
+        setIsAdmin(false);
+        try {
+          // Breve retraso...
+          await new Promise(r => setTimeout(r, 500));
           await signInAnonymously(auth);
+        } catch (error) {
+          console.error("Error reconexión anónima:", error);
+          setAuthError("Error de conexión. Intenta recargar la página.");
         }
-      } catch (error) {
-        console.error("Auth error:", error);
       }
-    };
-    initAuth();
-
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setCurrentUser(user);
-      setIsAdmin(user?.email === "admin@ntrzacatecas.com");
     });
     return () => unsubscribe();
   }, []);
@@ -245,8 +277,30 @@ export default function App() {
     if (!currentUser) return;
     const configRef = doc(db, "config", "general");
     const unsubscribe = onSnapshot(configRef, (docSnap) => {
-      setIsMaintenance(docSnap.exists() && docSnap.data().isMaintenanceMode === true);
+      const isMaint = docSnap.exists() && docSnap.data().isMaintenanceMode === true;
+      setIsMaintenance(isMaint);
       setCheckingMaintenance(false);
+
+      // LIMPIEZA DE ALMACENAMIENTO LOCAL SI ENTRA EN MANTENIMIENTO (CONSERVANDO myPosts)
+      if (isMaint) {
+        try {
+          // Guardamos temporalmente mis posts
+          const savedPosts = localStorage.getItem('myPosts');
+          
+          // Borramos todo el LocalStorage para seguridad
+          localStorage.clear();
+          
+          // Restauramos mis posts para no perder permisos de edición
+          if (savedPosts) {
+            localStorage.setItem('myPosts', savedPosts);
+          }
+          
+          // Vaciamos las noticias en la memoria RAM para que desaparezcan offline
+          setArticles([]);
+        } catch (e) {
+          console.error("No se pudo limpiar el LocalStorage", e);
+        }
+      }
     }, () => setCheckingMaintenance(false));
     return () => unsubscribe();
   }, [currentUser]);
@@ -254,13 +308,11 @@ export default function App() {
   useEffect(() => { 
     // Título de la página
     document.title = showNtrLogo ? "NTR Zacatecas" : "Avisos Ciudadanos"; 
-
-    // Lógica para cambiar el logo de React (favicon) de la pestaña
+    // Lógica para cambiar el logo...
     const updateFavicon = () => {
       const link = document.querySelector("link[rel*='icon']") || document.createElement('link');
       link.type = 'image/x-icon';
       link.rel = 'shortcut icon';
-      // Icono de NTR si está activo, de lo contrario un icono de noticias/avisos
       link.href = showNtrLogo 
         ? "https://www.google.com/s2/favicons?sz=64&domain=ntrzacatecas.com" 
         : "https://cdn-icons-png.flaticon.com/512/1042/1042680.png";
@@ -288,7 +340,10 @@ export default function App() {
   const handleAdminTrigger = (e) => {
     if (e) { e.stopPropagation(); e.preventDefault(); }
     if (isAdmin) {
-      if(window.confirm("¿Cerrar sesión de administrador?")) signOut(auth);
+      if(window.confirm("¿Cerrar sesión de administrador?")) {
+        signOut(auth);
+        showNotification("Sesión cerrada correctamente");
+      }
     } else {
       setShowLoginModal(true);
       setLoginError('');
@@ -302,10 +357,12 @@ export default function App() {
       await signInWithEmailAndPassword(auth, "admin@ntrzacatecas.com", passwordInput);
       setShowLoginModal(false);
       setIsEditMode(false);
+      showNotification("Sesión iniciada como Administrador");
     } catch (error) {
       if (passwordInput === "administrador") {
         setIsAdmin(true); 
         setShowLoginModal(false);
+        showNotification("Modo edición activado localmente");
       } else {
         setLoginError("Contraseña incorrecta.");
       }
@@ -360,7 +417,6 @@ export default function App() {
     setIsSubmitting(true);
     const finalImage = image || "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&auto=format&fit=crop&q=60";
     try {
-      // Datos base que se actualizan tanto en creación como edición
       const basePayload = {
         title, category, image: finalImage, content: contentBlocks, author: author.trim() || "Redacción NTR",
         date: new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' }),
@@ -368,27 +424,39 @@ export default function App() {
       };
 
       if (editingId) {
-        // AL EDITAR
+        // AL EDITAR...
         await updateDoc(doc(db, "noticias", editingId), basePayload);
+        showNotification("¡Noticia actualizada exitosamente!");
       } else {
-        // AL CREAR
+        // AL CREAR...
         const newPayload = { ...basePayload, comments: [], creatorId: currentUser.uid };
         const docRef = await addDoc(collection(db, "noticias"), newPayload);
         const updated = [...myPosts, docRef.id];
         setMyPosts(updated);
         localStorage.setItem('myPosts', JSON.stringify(updated));
+        showNotification("¡Noticia publicada exitosamente!");
       }
       resetForm();
       setView('home');
-    } catch (error) { console.error(error); } finally { setIsSubmitting(false); }
+    } catch (error) { 
+      console.error(error); 
+      showNotification("Error al guardar la noticia", "error");
+    } finally { 
+      setIsSubmitting(false); 
+    }
   };
 
   const handleDelete = async (e, article) => {
     e.stopPropagation();
     if (!canManageArticle(article) || !currentUser) return;
-    if(window.confirm("⚠️ ¿Eliminar noticia?")) {
-      await deleteDoc(doc(db, "noticias", article.id));
-      if (selectedArticle?.id === article.id) setView('home');
+    if(window.confirm("⚠️ ¿Estás seguro de eliminar esta noticia?")) {
+      try {
+        await deleteDoc(doc(db, "noticias", article.id));
+        showNotification("Noticia eliminada correctamente");
+        if (selectedArticle?.id === article.id) setView('home');
+      } catch (error) {
+        showNotification("Error al eliminar la noticia", "error");
+      }
     }
   };
 
@@ -400,13 +468,18 @@ export default function App() {
   const handleAddComment = async (e) => {
     e.preventDefault();
     if (!commentName.trim() || !commentText.trim() || !currentUser) return;
-    const newComment = {
-      id: Date.now(), author: commentName, text: commentText, image: commentImage || null,
-      date: new Date().toLocaleDateString('es-MX', { hour: '2-digit', minute: '2-digit' })
-    };
-    await updateDoc(doc(db, "noticias", selectedArticle.id), { comments: arrayUnion(newComment) });
-    setSelectedArticle(prev => ({ ...prev, comments: [...(prev.comments || []), newComment] }));
-    setCommentName(''); setCommentText(''); setCommentImage('');
+    try {
+      const newComment = {
+        id: Date.now(), author: commentName, text: commentText, image: commentImage || null,
+        date: new Date().toLocaleDateString('es-MX', { hour: '2-digit', minute: '2-digit' })
+      };
+      await updateDoc(doc(db, "noticias", selectedArticle.id), { comments: arrayUnion(newComment) });
+      setSelectedArticle(prev => ({ ...prev, comments: [...(prev.comments || []), newComment] }));
+      setCommentName(''); setCommentText(''); setCommentImage('');
+      showNotification("¡Tu opinión ha sido publicada!");
+    } catch (error) {
+      showNotification("Error al publicar el comentario", "error");
+    }
   };
 
   const handleCommentImageUpload = async (e) => {
@@ -430,9 +503,14 @@ export default function App() {
   };
 
   const handleDeleteComment = async (commentToDelete) => {
-    if (!isAdmin || !window.confirm("¿Borrar comentario?")) return;
-    await updateDoc(doc(db, "noticias", selectedArticle.id), { comments: arrayRemove(commentToDelete) });
-    setSelectedArticle(prev => ({ ...prev, comments: prev.comments.filter(c => c.id !== commentToDelete.id) }));
+    if (!isAdmin || !window.confirm("¿Estás seguro de borrar este comentario?")) return;
+    try {
+      await updateDoc(doc(db, "noticias", selectedArticle.id), { comments: arrayRemove(commentToDelete) });
+      setSelectedArticle(prev => ({ ...prev, comments: prev.comments.filter(c => c.id !== commentToDelete.id) }));
+      showNotification("Comentario eliminado correctamente");
+    } catch (error) {
+      showNotification("Error al eliminar el comentario", "error");
+    }
   };
 
   const startEditingComment = (comment) => {
@@ -441,12 +519,17 @@ export default function App() {
   };
 
   const saveEditedComment = async () => {
-    const updated = selectedArticle.comments.map(c => 
-      c.id === editingCommentId ? { ...c, author: editCommentAuthor, text: editCommentText, image: editCommentImage } : c
-    );
-    await updateDoc(doc(db, "noticias", selectedArticle.id), { comments: updated });
-    setSelectedArticle(prev => ({ ...prev, comments: updated }));
-    setEditingCommentId(null);
+    try {
+      const updated = selectedArticle.comments.map(c => 
+        c.id === editingCommentId ? { ...c, author: editCommentAuthor, text: editCommentText, image: editCommentImage } : c
+      );
+      await updateDoc(doc(db, "noticias", selectedArticle.id), { comments: updated });
+      setSelectedArticle(prev => ({ ...prev, comments: updated }));
+      setEditingCommentId(null);
+      showNotification("Comentario actualizado exitosamente");
+    } catch (error) {
+      showNotification("Error al actualizar el comentario", "error");
+    }
   };
 
   const openArticle = (article) => {
@@ -503,8 +586,34 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans text-gray-800 pb-12 relative">
+    <div className="min-h-screen bg-gray-50 font-sans text-gray-800 pb-12 relative overflow-x-hidden">
       
+      {/* --- NOTIFICACIÓN ANIMADA (ARRIBA Y CENTRO, SOLO AZUL) --- */}
+      {notification.show && (
+        <div 
+          className={`fixed top-6 left-1/2 z-[100] px-6 py-3.5 rounded-full shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)] flex items-center gap-3 transition-all duration-400 ease-out transform bg-gradient-to-r from-blue-600 to-blue-900 text-white border border-blue-400/50 ${
+            notification.isVisible 
+              ? '-translate-x-1/2 translate-y-0 opacity-100 scale-100' 
+              : '-translate-x-1/2 -translate-y-24 opacity-0 scale-95'
+          }`}
+        >
+          {notification.type === 'success' ? <CheckCircle size={20} className="text-blue-100" /> : <AlertTriangle size={20} className="text-blue-100" />}
+          <span className="font-bold tracking-wide text-sm whitespace-nowrap">{notification.message}</span>
+          <button 
+            onClick={closeNotification} 
+            className="ml-2 hover:bg-white/20 p-1 rounded-full transition-colors focus:outline-none"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
+      {authError && (
+        <div className="bg-red-500 text-white p-3 text-center text-sm font-bold flex items-center justify-center gap-2 sticky top-0 z-[60]">
+          <AlertTriangle size={18} /> Error de Conexión: {authError}
+        </div>
+      )}
+
       {fullScreenImage && (
         <div className="fixed inset-0 z-[60] bg-black/95 flex items-center justify-center p-4 animate-in fade-in duration-200 backdrop-blur-sm" onClick={() => setFullScreenImage(null)}>
           <button onClick={() => setFullScreenImage(null)} className="absolute top-6 right-6 text-white hover:text-gray-300 transition-colors"><X size={32} /></button>
@@ -551,56 +660,120 @@ export default function App() {
             {isAdmin && <div className="hidden sm:flex items-center gap-2 bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold animate-pulse"><Lock size={12} /> ADMIN</div>}
             {isEditMode && !isAdmin && <div className="hidden sm:flex items-center gap-2 bg-blue-100 text-blue-900 px-3 py-1 rounded-full text-xs font-bold animate-pulse"><Edit size={12} /> EDICIÓN</div>}
             <nav className="flex items-center gap-2 sm:gap-4">
-              <button onClick={() => setView('home')} className={`px-4 py-2 rounded-full font-bold text-sm transition-all flex items-center gap-2 ${view === 'home' || view === 'article' ? 'bg-gray-100 text-blue-900' : 'text-gray-500 hover:bg-gray-50'}`}>
+              <button onClick={() => setView('home')} className={`px-4 py-2 rounded-full font-bold text-sm transition-all flex items-center gap-2 ${view === 'home' || view === 'article' || view === 'terms' ? 'bg-gray-100 text-blue-900' : 'text-gray-500 hover:bg-gray-50'}`}>
                 <Home size={18} /> <span className="hidden sm:inline">Inicio</span>
               </button>
               <button onClick={() => { resetForm(); setView('create'); }} className={`px-4 py-2 rounded-full font-bold text-sm transition-all flex items-center gap-2 ${view === 'create' ? `${ntrBlue} text-white shadow-lg` : 'text-gray-500 hover:bg-gray-50'}`}>
                 <PlusCircle size={18} /> <span className="hidden sm:inline">Redacción</span>
               </button>
-              {isAdmin && <button onClick={() => signOut(auth)} className="p-2 text-gray-400 hover:text-red-600"><LogOut size={18} /></button>}
-              {isEditMode && !isAdmin && <button onClick={() => setIsEditMode(false)} className="p-2 text-gray-400 hover:text-blue-600" title="Salir de Modo Edición"><LogOut size={18} /></button>}
+              {isAdmin && <button onClick={() => {signOut(auth); showNotification("Sesión cerrada", "error");}} className="p-2 text-gray-400 hover:text-red-600"><LogOut size={18} /></button>}
+              {isEditMode && !isAdmin && <button onClick={() => {setIsEditMode(false); showNotification("Saliste del modo edición", "error");}} className="p-2 text-gray-400 hover:text-blue-600" title="Salir de Modo Edición"><LogOut size={18} /></button>}
             </nav>
           </div>
         </div>
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-8">
+        {/* --- PANTALLA PRINCIPAL --- */}
         {view === 'home' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 animate-in fade-in duration-500">
-            {articles.map((article) => (
-              <article key={article.id} onClick={() => openArticle(article)} className="bg-white rounded-xl shadow-sm hover:shadow-2xl transition-all border group cursor-pointer flex flex-col h-full relative">
-                <div className="relative h-56 overflow-hidden">
-                  <img src={article.image} alt={article.title} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
-                  <div className="absolute top-4 left-4"><span className={`${ntrBlue} text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg uppercase`}>{article.category}</span></div>
-                </div>
-                <div className="p-6 flex-grow flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center text-gray-400 text-xs mb-3 gap-2"><Calendar size={14} /> <span>{article.date}</span></div>
-                    <h3 className="text-xl font-bold mb-3 group-hover:text-blue-900 line-clamp-3">{article.title}</h3>
-                    <p className="text-gray-600 text-sm line-clamp-3 mb-4">
-                      {Array.isArray(article.content) 
-                        ? (article.content.find(b => b.type === 'text')?.value || "Ver fotos...") 
-                        : article.content}
-                    </p>
+          <div className="animate-in fade-in duration-500 flex flex-col min-h-[calc(100vh-200px)]">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 flex-grow">
+              {articles.map((article) => (
+                <article key={article.id} onClick={() => openArticle(article)} className="bg-white rounded-xl shadow-sm hover:shadow-2xl transition-all border group cursor-pointer flex flex-col h-full relative">
+                  <div className="relative h-56 overflow-hidden">
+                    <img src={article.image} alt={article.title} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+                    <div className="absolute top-4 left-4"><span className={`${ntrBlue} text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg uppercase`}>{article.category}</span></div>
                   </div>
-                  <div className="pt-4 border-t flex justify-between items-center mt-auto">
-                    <div className="flex items-center gap-4">
-                      <span className={`text-sm font-bold ${ntrText} flex items-center`}>Leer nota completa</span>
-                      <div className="flex items-center text-gray-400 text-xs gap-1"><MessageSquare size={14} /><span>{(article.comments || []).length}</span></div>
+                  <div className="p-6 flex-grow flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center text-gray-400 text-xs mb-3 gap-2"><Calendar size={14} /> <span>{article.date}</span></div>
+                      <h3 className="text-xl font-bold mb-3 group-hover:text-blue-900 line-clamp-3">{article.title}</h3>
+                      <p className="text-gray-600 text-sm line-clamp-3 mb-4">
+                        {Array.isArray(article.content) 
+                          ? (article.content.find(b => b.type === 'text')?.value || "Ver fotos...") 
+                          : article.content}
+                      </p>
                     </div>
-                    {(isAdmin || isEditMode) && canManageArticle(article) && (
-                      <div className="flex gap-2">
-                        <button onClick={(e) => { e.stopPropagation(); handleEdit(e, article); }} className="text-blue-500 p-1 bg-blue-50 rounded"><Edit size={16} /></button>
-                        <button onClick={(e) => handleDelete(e, article)} className="text-red-400 p-1 bg-red-50 rounded"><Trash2 size={16} /></button>
+                    <div className="pt-4 border-t flex justify-between items-center mt-auto">
+                      <div className="flex items-center gap-4">
+                        <span className={`text-sm font-bold ${ntrText} flex items-center`}>Leer nota completa</span>
+                        <div className="flex items-center text-gray-400 text-xs gap-1"><MessageSquare size={14} /><span>{(article.comments || []).length}</span></div>
                       </div>
-                    )}
+                      {(isAdmin || isEditMode) && canManageArticle(article) && (
+                        <div className="flex gap-2">
+                          <button onClick={(e) => { e.stopPropagation(); handleEdit(e, article); }} className="text-blue-500 p-1 bg-blue-50 rounded"><Edit size={16} /></button>
+                          <button onClick={(e) => handleDelete(e, article)} className="text-red-400 p-1 bg-red-50 rounded"><Trash2 size={16} /></button>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </article>
-            ))}
+                </article>
+              ))}
+            </div>
+            
+            {/* TEXTO DE RESPONSABILIDAD */}
+            {articles.length > 0 && (
+              <div className="mt-16 pt-8 border-t border-gray-200 text-center flex flex-col md:flex-row items-center justify-center gap-2 md:gap-4 pb-4">
+                <p className="text-xs text-gray-400 font-medium tracking-wide">
+                  Las noticias y publicaciones son responsabilidad de quien las lee y de quien las publica.
+                </p>
+                <button 
+                  onClick={() => { setView('terms'); window.scrollTo(0, 0); }} 
+                  className="text-xs text-blue-600 hover:text-blue-800 font-bold transition-colors flex items-center gap-1"
+                >
+                  <FileText size={14} />
+                  Aviso Legal y Términos
+                </button>
+              </div>
+            )}
           </div>
         )}
 
+        {/* --- PANTALLA TÉRMINOS Y CONDICIONES --- */}
+        {view === 'terms' && (
+          <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-500 p-8 md:p-12 mb-12">
+            <button onClick={() => setView('home')} className="mb-8 flex items-center gap-2 text-gray-500 hover:text-blue-900 transition-colors font-bold">
+              <ArrowLeft size={20} /> Volver al inicio
+            </button>
+            
+            <h1 className={`text-3xl md:text-4xl font-black mb-8 ${ntrText} border-b pb-4`}>Términos y Condiciones de Uso y Aviso Legal</h1>
+            
+            <div className="prose prose-lg text-gray-700 max-w-none space-y-6">
+              <p>Bienvenido al portal de <strong>Avisos Ciudadanos</strong>. Al acceder, navegar y utilizar esta plataforma, aceptas estar sujeto a las siguientes disposiciones legales. Si no estás de acuerdo con ellas, te invitamos a abandonar el sitio.</p>
+
+              <h3 className="text-xl font-bold text-gray-900 mt-8 mb-3">1. Naturaleza de la Plataforma</h3>
+              <p>Esta plataforma es un medio tecnológico diseñado para facilitar el ejercicio del derecho a la libre manifestación de ideas y la libertad de difusión, consagrados en los <a href="https://www.diputados.gob.mx/LeyesBiblio/pdf/CPEUM.pdf" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline font-medium">Artículos 6º y 7º de la Constitución Política de los Estados Unidos Mexicanos</a>. Funciona exclusivamente como un tablero de avisos de acceso público y gratuito.</p>
+
+              <h3 className="text-xl font-bold text-gray-900 mt-8 mb-3">2. Intermediación Tecnológica y Ausencia de Responsabilidad Editorial</h3>
+              <p>La plataforma (así como sus creadores y administradores) actúa única y exclusivamente como un intermediario tecnológico (prestador de servicios de alojamiento de datos). <strong>No ejercemos control previo, no editamos, no aprobamos ni hacemos nuestro el contenido publicado por los usuarios</strong>. Toda noticia, aviso, denuncia o comentario refleja únicamente la opinión y responsabilidad inalienable de su autor.</p>
+
+              <h3 className="text-xl font-bold text-gray-900 mt-8 mb-3">3. Responsabilidad Exclusiva del Usuario</h3>
+              <p className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-900 font-medium">
+                Con fundamento en el derecho aplicable, la responsabilidad legal, civil, penal o moral derivada de cualquier texto, imagen o comentario publicado recae de manera absoluta y exclusiva en la persona que lo emite. Quien lee y utiliza la información lo hace bajo su propio riesgo y criterio.
+              </p>
+
+              <h3 className="text-xl font-bold text-gray-900 mt-8 mb-3">4. Publicación Anónima y Protección de Datos</h3>
+              <p>En estricto apego y respeto a la privacidad de los denunciantes, el sistema permite la publicación de contenido de manera completamente anónima. No requerimos la creación de cuentas, ni recopilamos nombres, correos electrónicos o direcciones IP de manera sistemática para permitir la publicación. Al ser un servicio de publicación anónima que no solicita datos personales para operar, la plataforma se exime de las obligaciones de tratamiento establecidas en la Ley Federal de Protección de Datos Personales en Posesión de los Particulares, ya que no recaba datos identificables.</p>
+
+              <h3 className="text-xl font-bold text-gray-900 mt-8 mb-3">5. Facultad de Moderación</h3>
+              <p>Aunque la plataforma respeta la libertad de expresión, los administradores se reservan el derecho irrestricto de remover, eliminar u ocultar, sin necesidad de previo aviso al autor original, cualquier publicación o comentario que sea reportado por mandato judicial o que, a juicio único de la administración, vulnere la integridad de la plataforma o de terceros.</p>
+
+              <h3 className="text-xl font-bold text-gray-900 mt-8 mb-3">6. Liberación de Daños y Perjuicios</h3>
+              <p>Al utilizar este portal, el usuario libera de forma absoluta y permanente a los creadores, desarrolladores y administradores de la plataforma de toda reclamación, demanda, litigio o indemnización por supuestos daños (incluyendo daño moral) o perjuicios derivados de la información ("User-Generated Content") aquí albergada.</p>
+
+              <h3 className="text-xl font-bold text-gray-900 mt-8 mb-3">7. Modificaciones a los Términos y Condiciones</h3>
+              <p>Nos reservamos el derecho exclusivo de modificar, actualizar, añadir o eliminar porciones de estos Términos y Condiciones en cualquier momento y sin previo aviso. Es responsabilidad del usuario revisar periódicamente esta sección. El acceso o uso continuo de la plataforma después de la publicación de dichos cambios constituye la aceptación vinculante a las modificaciones realizadas.</p>
+            </div>
+            
+            <div className="mt-12 pt-8 border-t text-center">
+               <button onClick={() => setView('home')} className={`${ntrBlue} text-white px-8 py-3 rounded-full font-bold shadow-lg hover:shadow-xl hover:scale-105 transition-all`}>
+                 Volver al inicio
+               </button>
+            </div>
+          </div>
+        )}
+
+        {/* --- PANTALLA DE REDACCIÓN --- */}
         {view === 'create' && (
           <div className="max-w-3xl mx-auto animate-in slide-in-from-bottom-4 duration-500">
             <div className="bg-white rounded-xl shadow-xl p-8 border border-gray-100">
@@ -724,6 +897,7 @@ export default function App() {
           </div>
         )}
 
+        {/* --- PANTALLA DE ARTÍCULO --- */}
         {view === 'article' && selectedArticle && (
           <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-right-8 duration-500">
             <button onClick={() => setView('home')} className="m-6 flex items-center gap-2 text-gray-500 hover:text-blue-900 transition-colors font-bold"><ArrowLeft size={20} /> Volver al inicio</button>
@@ -741,11 +915,11 @@ export default function App() {
               <div className="p-8 md:p-12">
                 {(isAdmin || isEditMode) && canManageArticle(selectedArticle) && (
                   <div className="mb-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex gap-4 items-center justify-between">
-                      <span className="text-yellow-800 font-bold flex items-center gap-2">{isAdmin ? <><Lock size={16}/> Admin</> : <><Edit size={16}/> Tu Nota</>}</span>
-                      <div className="flex gap-2">
-                        <button onClick={(e) => handleEdit(e, selectedArticle)} className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg font-bold hover:bg-blue-200 transition-colors">Editar</button>
-                        <button onClick={(e) => handleDelete(e, selectedArticle)} className="px-4 py-2 bg-red-100 text-red-700 rounded-lg font-bold hover:bg-red-200 transition-colors">Borrar</button>
-                      </div>
+                     <span className="text-yellow-800 font-bold flex items-center gap-2">{isAdmin ? <><Lock size={16}/> Admin</> : <><Edit size={16}/> Tu Nota</>}</span>
+                     <div className="flex gap-2">
+                       <button onClick={(e) => handleEdit(e, selectedArticle)} className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg font-bold hover:bg-blue-200 transition-colors">Editar</button>
+                       <button onClick={(e) => handleDelete(e, selectedArticle)} className="px-4 py-2 bg-red-100 text-red-700 rounded-lg font-bold hover:bg-red-200 transition-colors">Borrar</button>
+                     </div>
                   </div>
                 )}
                 <div className="prose prose-lg max-w-none text-gray-700 leading-relaxed mb-12">{renderArticleContent(selectedArticle.content)}</div>
