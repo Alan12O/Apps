@@ -264,6 +264,10 @@ export default function App() {
 
   useEffect(() => {
     if (!currentUser) return;
+
+    // Si no hay artículos todavía, forzamos que se muestre el esqueleto
+    if (articles.length === 0) setLoading(true);
+
     const q = query(collection(db, "noticias"), orderBy("timestamp", "desc"), limit(displayLimit + 1));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       if (snapshot.docs.length > displayLimit) {
@@ -274,7 +278,10 @@ export default function App() {
         setHasMore(false);
         setArticles(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       }
-      setLoading(false);
+
+      // Retrasar artificialmente medio segundo para que la animación se alcance a ver de forma agradable
+      setTimeout(() => setLoading(false), 600);
+
     }, (err) => {
       setLoading(false);
     });
