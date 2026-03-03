@@ -10,7 +10,7 @@ import {
 import { initializeApp } from "firebase/app";
 import {
   getFirestore, collection, addDoc, onSnapshot,
-  deleteDoc, doc, updateDoc, arrayUnion, arrayRemove, query, orderBy
+  deleteDoc, doc, updateDoc, arrayUnion, arrayRemove, query, orderBy, limit
 } from "firebase/firestore";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, signInAnonymously } from "firebase/auth";
 
@@ -41,6 +41,11 @@ export default function App() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [activeAiBlockId, setActiveAiBlockId] = useState(null);
   const [authError, setAuthError] = useState(null);
+
+  // PAGINACIÓN
+  const [displayLimit, setDisplayLimit] = useState(9);
+  const [maxAutoLoad, setMaxAutoLoad] = useState(36);
+  const [hasMore, setHasMore] = useState(false);
 
   // ESTADOS DE NOTIFICACIÓN ANIMADA (ENTRADA Y SALIDA)
   const [notification, setNotification] = useState({ show: false, message: '', type: 'success', isVisible: false });
@@ -259,15 +264,34 @@ export default function App() {
 
   useEffect(() => {
     if (!currentUser) return;
-    const q = query(collection(db, "noticias"), orderBy("timestamp", "desc"));
+    const q = query(collection(db, "noticias"), orderBy("timestamp", "desc"), limit(displayLimit + 1));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      setArticles(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      if (snapshot.docs.length > displayLimit) {
+        setHasMore(true);
+        const docsToShow = snapshot.docs.slice(0, displayLimit);
+        setArticles(docsToShow.map(doc => ({ id: doc.id, ...doc.data() })));
+      } else {
+        setHasMore(false);
+        setArticles(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      }
       setLoading(false);
     }, (err) => {
       setLoading(false);
     });
     return () => unsubscribe();
-  }, [currentUser]);
+  }, [currentUser, displayLimit]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.innerHeight + document.documentElement.scrollTop >= document.documentElement.offsetHeight - 500) {
+        if (hasMore && displayLimit < maxAutoLoad) {
+          setDisplayLimit(prev => prev + 9);
+        }
+      }
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [hasMore, displayLimit, maxAutoLoad]);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -706,9 +730,25 @@ export default function App() {
               ))}
             </div>
 
+            {/* BOTÓN SIGUIENTE PÁGINA O SPINNER SCROLL */}
+            {hasMore && (
+              <div className="mt-12 flex justify-center pb-8">
+                {displayLimit >= maxAutoLoad ? (
+                  <button
+                    onClick={() => { setMaxAutoLoad(prev => prev + 36); setDisplayLimit(prev => prev + 9); }}
+                    className={`${ntrBlue} text-white px-8 py-3 rounded-full font-bold shadow-lg hover:shadow-xl hover:scale-105 transition-all outline-none`}
+                  >
+                    Ver Siguiente Página
+                  </button>
+                ) : (
+                  <Loader2 className="animate-spin text-blue-900" size={32} />
+                )}
+              </div>
+            )}
+
             {/* TEXTO DE RESPONSABILIDAD */}
             {articles.length > 0 && (
-              <div className="mt-16 pt-8 border-t border-gray-200 text-center flex flex-col md:flex-row items-center justify-center gap-2 md:gap-4 pb-4">
+              <div className={`mt-16 pt-8 border-t border-gray-200 text-center flex flex-col md:flex-row items-center justify-center gap-2 md:gap-4 pb-4 ${hasMore ? 'mt-8' : 'mt-16'}`}>
                 <p className="text-xs text-gray-400 font-medium tracking-wide">
                   Las noticias y publicaciones son responsabilidad de quien las lee y de quien las publica.
                 </p>
