@@ -769,7 +769,7 @@ export default function App() {
               )}
 
               {/* ESQUELETOS AL HACER SCROLL O PAGINACIÓN (Se agregan al final de las reales) */}
-              {!loading && articles.length > 0 && isFetchingMore && hasMore && (
+              {!loading && articles.length > 0 && isFetchingMore && (
                 Array.from({ length: 9 }).map((_, i) => (
                   <article key={`more-skeleton-${i}`} className="bg-white rounded-xl shadow-sm border flex flex-col h-full relative overflow-hidden">
                     <div className="relative h-56 bg-gray-200 animate-pulse"></div>
@@ -796,7 +796,7 @@ export default function App() {
             </div>
 
             {/* BOTÓN SIGUIENTE PÁGINA O SPINNER SCROLL */}
-            {hasMore && (
+            {(hasMore || isFetchingMore) && (
               <div className="mt-12 flex justify-center pb-8">
                 {displayLimit >= maxAutoLoad && !isFetchingMore ? (
                   <button
@@ -817,7 +817,7 @@ export default function App() {
 
             {/* TEXTO DE RESPONSABILIDAD */}
             {articles.length > 0 && (
-              <div className={`mt-16 pt-8 border-t border-gray-200 text-center flex flex-col md:flex-row items-center justify-center gap-2 md:gap-4 pb-4 ${hasMore ? 'mt-8' : 'mt-16'}`}>
+              <div className={`mt-16 pt-8 border-t border-gray-200 text-center flex flex-col md:flex-row items-center justify-center gap-2 md:gap-4 pb-4 ${(hasMore || isFetchingMore) ? 'mt-8' : 'mt-16'}`}>
                 <p className="text-xs text-gray-400 font-medium tracking-wide">
                   Las noticias y publicaciones son responsabilidad de quien las lee y de quien las publica.
                 </p>
