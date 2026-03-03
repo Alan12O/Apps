@@ -1029,14 +1029,23 @@ export default function App() {
           <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-right-8 duration-500">
             <button onClick={() => setView('home')} className="m-6 flex items-center gap-2 text-gray-500 hover:text-blue-900 transition-colors font-bold"><ArrowLeft size={20} /> Volver al inicio</button>
             <article>
-              <div className="h-96 relative">
+              <div className="h-64 md:h-96 relative group">
                 <img src={selectedArticle.image} alt={selectedArticle.title} className="w-full h-full object-cover" />
-                <button onClick={() => setFullScreenImage(selectedArticle.image)} className="absolute bottom-6 right-6 bg-black/50 text-white p-3 rounded-full backdrop-blur-sm shadow-lg flex items-center gap-2 z-10 font-bold text-sm hover:bg-black/70 transition-all"><Maximize2 size={20} /> <span>Ver foto completa</span></button>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
-                <div className="absolute bottom-0 left-0 p-8 w-full pointer-events-none">
-                  <span className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-bold mb-4 inline-block">{selectedArticle.category}</span>
-                  <h1 className="text-4xl md:text-5xl font-bold text-white leading-tight mb-2 drop-shadow-lg">{selectedArticle.title}</h1>
-                  <div className="flex items-center text-gray-200 text-sm gap-4"><span className="flex items-center gap-2"><User size={16} /> {selectedArticle.author || "Redacción NTR"}</span><span className="flex items-center gap-2"><Calendar size={16} /> {selectedArticle.date}</span></div>
+                <button onClick={() => setFullScreenImage(selectedArticle.image)} className="absolute top-4 right-4 md:top-6 md:right-6 bg-black/50 text-white p-2 md:p-3 rounded-full backdrop-blur-sm shadow-lg flex items-center gap-2 z-10 font-bold text-sm hover:bg-black/70 transition-all opacity-80 hover:opacity-100">
+                  <Maximize2 size={20} /> <span className="hidden sm:inline">Ver foto completa</span>
+                </button>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
+                <div className="absolute bottom-0 left-0 p-4 md:p-8 w-full pointer-events-none">
+                  <span className="bg-blue-600 text-white px-2 py-1 md:px-3 md:py-1 rounded-full text-xs md:text-sm font-bold mb-2 md:mb-4 inline-block shadow-sm">
+                    {selectedArticle.category}
+                  </span>
+                  <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white leading-tight md:leading-tight mb-2 drop-shadow-lg">
+                    {selectedArticle.title}
+                  </h1>
+                  <div className="flex flex-wrap items-center text-gray-200 text-xs md:text-sm gap-2 sm:gap-4 opacity-90">
+                    <span className="flex items-center gap-1.5"><User size={14} className="md:w-4 md:h-4" /> {selectedArticle.author || "Redacción NTR"}</span>
+                    <span className="flex items-center gap-1.5"><Calendar size={14} className="md:w-4 md:h-4" /> {selectedArticle.date}</span>
+                  </div>
                 </div>
               </div>
               <div className="p-8 md:p-12">
