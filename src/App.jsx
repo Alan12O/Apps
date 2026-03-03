@@ -697,37 +697,63 @@ export default function App() {
         {view === 'home' && (
           <div className="animate-in fade-in duration-500 flex flex-col min-h-[calc(100vh-200px)]">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 flex-grow">
-              {articles.map((article) => (
-                <article key={article.id} onClick={() => openArticle(article)} className="bg-white rounded-xl shadow-sm hover:shadow-2xl transition-all border group cursor-pointer flex flex-col h-full relative">
-                  <div className="relative h-56 overflow-hidden">
-                    <img src={article.image} alt={article.title} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
-                    <div className="absolute top-4 left-4"><span className={`${ntrBlue} text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg uppercase`}>{article.category}</span></div>
-                  </div>
-                  <div className="p-6 flex-grow flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center text-gray-400 text-xs mb-3 gap-2"><Calendar size={14} /> <span>{article.date}</span></div>
-                      <h3 className="text-xl font-bold mb-3 group-hover:text-blue-900 line-clamp-3">{article.title}</h3>
-                      <p className="text-gray-600 text-sm line-clamp-3 mb-4">
-                        {Array.isArray(article.content)
-                          ? (article.content.find(b => b.type === 'text')?.value || "Ver fotos...")
-                          : article.content}
-                      </p>
-                    </div>
-                    <div className="pt-4 border-t flex justify-between items-center mt-auto">
-                      <div className="flex items-center gap-4">
-                        <span className={`text-sm font-bold ${ntrText} flex items-center`}>Leer nota completa</span>
-                        <div className="flex items-center text-gray-400 text-xs gap-1"><MessageSquare size={14} /><span>{(article.comments || []).length}</span></div>
-                      </div>
-                      {(isAdmin || isEditMode) && canManageArticle(article) && (
-                        <div className="flex gap-2">
-                          <button onClick={(e) => { e.stopPropagation(); handleEdit(e, article); }} className="text-blue-500 p-1 bg-blue-50 rounded"><Edit size={16} /></button>
-                          <button onClick={(e) => handleDelete(e, article)} className="text-red-400 p-1 bg-red-50 rounded"><Trash2 size={16} /></button>
+              {loading ? (
+                // ESQUELETOS DE CARGA (SKELETONS)
+                Array.from({ length: 9 }).map((_, i) => (
+                  <article key={`skeleton-${i}`} className="bg-white rounded-xl shadow-sm border flex flex-col h-full relative overflow-hidden">
+                    <div className="relative h-56 bg-gray-200 animate-pulse"></div>
+                    <div className="p-6 flex-grow flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center gap-2 mb-3"><div className="w-4 h-4 rounded bg-gray-200 animate-pulse"></div><div className="h-3 w-20 bg-gray-200 rounded animate-pulse"></div></div>
+                        <div className="h-6 bg-gray-200 rounded animate-pulse w-full mb-2"></div>
+                        <div className="h-6 bg-gray-200 rounded animate-pulse w-3/4 mb-4"></div>
+                        <div className="space-y-2">
+                          <div className="h-3 bg-gray-200 rounded animate-pulse w-full"></div>
+                          <div className="h-3 bg-gray-200 rounded animate-pulse w-full"></div>
+                          <div className="h-3 bg-gray-200 rounded animate-pulse w-4/5"></div>
                         </div>
-                      )}
+                      </div>
+                      <div className="pt-4 border-t flex justify-between items-center mt-6">
+                        <div className="h-4 bg-gray-200 rounded animate-pulse w-24"></div>
+                        <div className="h-4 bg-gray-200 rounded animate-pulse w-8"></div>
+                      </div>
                     </div>
-                  </div>
-                </article>
-              ))}
+                  </article>
+                ))
+              ) : (
+                // ARTÍCULOS REALES
+                articles.map((article) => (
+                  <article key={article.id} onClick={() => openArticle(article)} className="bg-white rounded-xl shadow-sm hover:shadow-2xl transition-all border group cursor-pointer flex flex-col h-full relative">
+                    <div className="relative h-56 overflow-hidden">
+                      <img src={article.image} alt={article.title} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+                      <div className="absolute top-4 left-4"><span className={`${ntrBlue} text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg uppercase`}>{article.category}</span></div>
+                    </div>
+                    <div className="p-6 flex-grow flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center text-gray-400 text-xs mb-3 gap-2"><Calendar size={14} /> <span>{article.date}</span></div>
+                        <h3 className="text-xl font-bold mb-3 group-hover:text-blue-900 line-clamp-3">{article.title}</h3>
+                        <p className="text-gray-600 text-sm line-clamp-3 mb-4">
+                          {Array.isArray(article.content)
+                            ? (article.content.find(b => b.type === 'text')?.value || "Ver fotos...")
+                            : article.content}
+                        </p>
+                      </div>
+                      <div className="pt-4 border-t flex justify-between items-center mt-auto">
+                        <div className="flex items-center gap-4">
+                          <span className={`text-sm font-bold ${ntrText} flex items-center`}>Leer nota completa</span>
+                          <div className="flex items-center text-gray-400 text-xs gap-1"><MessageSquare size={14} /><span>{(article.comments || []).length}</span></div>
+                        </div>
+                        {(isAdmin || isEditMode) && canManageArticle(article) && (
+                          <div className="flex gap-2">
+                            <button onClick={(e) => { e.stopPropagation(); handleEdit(e, article); }} className="text-blue-500 p-1 bg-blue-50 rounded"><Edit size={16} /></button>
+                            <button onClick={(e) => handleDelete(e, article)} className="text-red-400 p-1 bg-red-50 rounded"><Trash2 size={16} /></button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </article>
+                ))
+              )}
             </div>
 
             {/* BOTÓN SIGUIENTE PÁGINA O SPINNER SCROLL */}
