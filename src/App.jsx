@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  PlusCircle, Trash2, Calendar, Image as ImageIcon, Send, Globe, 
+import {
+  PlusCircle, Trash2, Calendar, Image as ImageIcon, Send, Globe,
   Briefcase, Cpu, Palette, Upload, ArrowLeft, Home, MessageSquare, User, X,
   Type, AlignLeft, ArrowUp, ArrowDown, Edit, Lock, LogOut, KeyRound,
   Maximize2, Settings, Sparkles, Loader2, AlertTriangle, CheckCircle, FileText
@@ -8,9 +8,9 @@ import {
 
 // --- 1. IMPORTACIONES DE FIREBASE ---
 import { initializeApp } from "firebase/app";
-import { 
-  getFirestore, collection, addDoc, onSnapshot, 
-  deleteDoc, doc, updateDoc, arrayUnion, arrayRemove, query, orderBy 
+import {
+  getFirestore, collection, addDoc, onSnapshot,
+  deleteDoc, doc, updateDoc, arrayUnion, arrayRemove, query, orderBy
 } from "firebase/firestore";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, signInAnonymously } from "firebase/auth";
 
@@ -24,11 +24,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const auth = getAuth(app); 
-
-// --- NOTA: CONFIGURACIÓN DE GEMINI ELIMINADA DEL FRONTEND ---
-// Las claves ahora están seguras en Vercel. Todo pasa por /api/chat.
-
+const auth = getAuth(app);
 // --- RECURSOS DE EJEMPLO ---
 const presetImages = [
   { name: "Tecnología", url: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&auto=format&fit=crop&q=60", icon: <Cpu size={16} /> },
@@ -42,17 +38,17 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false); 
+  const [isEditMode, setIsEditMode] = useState(false);
   const [activeAiBlockId, setActiveAiBlockId] = useState(null);
   const [authError, setAuthError] = useState(null);
-  
+
   // ESTADOS DE NOTIFICACIÓN ANIMADA (ENTRADA Y SALIDA)
   const [notification, setNotification] = useState({ show: false, message: '', type: 'success', isVisible: false });
   const notificationTimer = useRef(null);
   const hideTimer = useRef(null);
-  
+
   const [myPosts, setMyPosts] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('myPosts') || '[]'); } 
+    try { return JSON.parse(localStorage.getItem('myPosts') || '[]'); }
     catch (e) { return []; }
   });
 
@@ -61,7 +57,7 @@ export default function App() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
   const [loginError, setLoginError] = useState('');
-  const [view, setView] = useState('home'); 
+  const [view, setView] = useState('home');
   const [selectedArticle, setSelectedArticle] = useState(null);
   const [showNtrLogo, setShowNtrLogo] = useState(false);
   const [fullScreenImage, setFullScreenImage] = useState(null);
@@ -71,26 +67,26 @@ export default function App() {
   const [title, setTitle] = useState('');
   const [contentBlocks, setContentBlocks] = useState([{ id: Date.now(), type: 'text', value: '' }]);
   const [category, setCategory] = useState('General');
-  const [author, setAuthor] = useState('Anonimo');
-  const [image, setImage] = useState(''); 
+  const [author, setAuthor] = useState('Anónimo');
+  const [image, setImage] = useState('');
   const [isCompressing, setIsCompressing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Estados del Formulario (Comentarios)
   const [commentName, setCommentName] = useState('');
   const [commentText, setCommentText] = useState('');
-  const [commentImage, setCommentImage] = useState(''); 
+  const [commentImage, setCommentImage] = useState('');
   const [isCompressingComment, setIsCompressingComment] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editCommentAuthor, setEditCommentAuthor] = useState('');
   const [editCommentText, setEditCommentText] = useState('');
   const [editCommentImage, setEditCommentImage] = useState('');
-  
+
   const editCommentFileInputRef = useRef(null);
   const commentFileInputRef = useRef(null);
   const contentFileInputRefs = useRef({});
 
-  const ntrBlue = "bg-blue-900"; 
+  const ntrBlue = "bg-blue-900";
   const ntrText = "text-blue-900";
 
   // --- LÓGICA PARA MOSTRAR NOTIFICACIONES ---
@@ -119,7 +115,7 @@ export default function App() {
     // Desmontar componente...
     hideTimer.current = setTimeout(() => {
       setNotification(prev => ({ ...prev, show: false }));
-    }, 400); 
+    }, 400);
   };
 
   // --- LÓGICA DE BLOQUES ---
@@ -164,7 +160,7 @@ export default function App() {
   const handleBlockImageUpload = async (e, blockId) => {
     const file = e.target.files[0];
     if (file) {
-      setIsCompressing(true); 
+      setIsCompressing(true);
       const res = await compressImage(file);
       updateBlockValue(blockId, res);
       setIsCompressing(false);
@@ -174,7 +170,7 @@ export default function App() {
   // --- LÓGICA DE GEMINI (PROXY SEGURO CONECTADO A VERCEL) ---
   const callGemini = async (userPrompt) => {
     const systemPrompt = "Eres un redactor periodístico senior de Zacatecas. Tu tarea es profesionalizar y EXTENDER EXTENSAMENTE el texto. Debes generar un párrafo LARGO y MUY DETALLADO (al menos 150-200 palabras), con tono serio y estilo de crónica. Es VITAL que adaptes tu vocabulario a la sección indicada (ej: más técnico para Tecnología, formal para Política, crudo pero respetuoso para Seguridad). Mantén la continuidad con el párrafo anterior si se proporciona contexto. Responde únicamente con el párrafo redactado, sin saludos ni comentarios.";
-    
+
     // Concatenamos el contexto y la petición para enviarlo al servidor
     const finalPrompt = `${systemPrompt}\n\nCONTEXTO Y TEXTO A MEJORAR:\n${userPrompt}`;
 
@@ -191,7 +187,7 @@ export default function App() {
 
       const data = await response.json();
       return data.respuesta;
-      
+
     } catch (err) {
       console.error("Error conectando con el Proxy de IA:", err);
       throw new Error("PROXY_ERROR");
@@ -220,9 +216,9 @@ export default function App() {
         promptContext += `CONTINUIDAD - Párrafo anterior: "${previousContext}". `;
       }
       promptContext += `Idea actual que debes desarrollar extensamente bajo el enfoque de la sección ${category}: ${currentText}`;
-      
+
       const improvedText = await callGemini(promptContext);
-      
+
       if (improvedText) {
         updateBlockValue(blockId, improvedText);
         showNotification("¡Texto mejorado por IA!");
@@ -286,15 +282,15 @@ export default function App() {
         try {
           // Guardamos temporalmente mis posts
           const savedPosts = localStorage.getItem('myPosts');
-          
+
           // Borramos todo el LocalStorage para seguridad
           localStorage.clear();
-          
+
           // Restauramos mis posts para no perder permisos de edición
           if (savedPosts) {
             localStorage.setItem('myPosts', savedPosts);
           }
-          
+
           // Vaciamos las noticias en la memoria RAM para que desaparezcan offline
           setArticles([]);
         } catch (e) {
@@ -305,18 +301,18 @@ export default function App() {
     return () => unsubscribe();
   }, [currentUser]);
 
-  useEffect(() => { 
+  useEffect(() => {
     // Título de la página
-    document.title = showNtrLogo ? "NTR Zacatecas" : "Avisos Ciudadanos"; 
+    document.title = showNtrLogo ? "NTR Zacatecas" : "Avisos Ciudadanos";
     // Lógica para cambiar el logo...
     const updateFavicon = () => {
       const link = document.querySelector("link[rel*='icon']") || document.createElement('link');
       link.type = 'image/x-icon';
       link.rel = 'shortcut icon';
-      link.href = showNtrLogo 
-        ? "https://www.google.com/s2/favicons?sz=64&domain=ntrzacatecas.com" 
+      link.href = showNtrLogo
+        ? "https://www.google.com/s2/favicons?sz=64&domain=ntrzacatecas.com"
         : "https://cdn-icons-png.flaticon.com/512/1042/1042680.png";
-      
+
       if (!document.querySelector("link[rel*='icon']")) {
         document.getElementsByTagName('head')[0].appendChild(link);
       }
@@ -334,13 +330,13 @@ export default function App() {
 
   const handleLogoClick = (e) => {
     if (e.detail === 3) { e.preventDefault(); setShowNtrLogo(!showNtrLogo); }
-    else { if(view !== 'home') setView('home'); }
+    else { if (view !== 'home') setView('home'); }
   };
 
   const handleAdminTrigger = (e) => {
     if (e) { e.stopPropagation(); e.preventDefault(); }
     if (isAdmin) {
-      if(window.confirm("¿Cerrar sesión de administrador?")) {
+      if (window.confirm("¿Cerrar sesión de administrador?")) {
         signOut(auth);
         showNotification("Sesión cerrada correctamente");
       }
@@ -360,7 +356,7 @@ export default function App() {
       showNotification("Sesión iniciada como Administrador");
     } catch (error) {
       if (passwordInput === "administrador") {
-        setIsAdmin(true); 
+        setIsAdmin(true);
         setShowLoginModal(false);
         showNotification("Modo edición activado localmente");
       } else {
@@ -406,7 +402,7 @@ export default function App() {
     setTitle(article.title);
     setCategory(article.category);
     setImage(article.image);
-    setAuthor(article.author || "Redacción NTR");
+    setAuthor(article.author || "Anónimo");
     setContentBlocks(Array.isArray(article.content) ? article.content : [{ id: Date.now(), type: 'text', value: article.content }]);
     setView('create');
   };
@@ -418,7 +414,7 @@ export default function App() {
     const finalImage = image || "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&auto=format&fit=crop&q=60";
     try {
       const basePayload = {
-        title, category, image: finalImage, content: contentBlocks, author: author.trim() || "Redacción NTR",
+        title, category, image: finalImage, content: contentBlocks, author: author.trim() || "Anónimo",
         date: new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' }),
         timestamp: Date.now()
       };
@@ -438,18 +434,18 @@ export default function App() {
       }
       resetForm();
       setView('home');
-    } catch (error) { 
-      console.error(error); 
+    } catch (error) {
+      console.error(error);
       showNotification("Error al guardar la noticia", "error");
-    } finally { 
-      setIsSubmitting(false); 
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleDelete = async (e, article) => {
     e.stopPropagation();
     if (!canManageArticle(article) || !currentUser) return;
-    if(window.confirm("⚠️ ¿Estás seguro de eliminar esta noticia?")) {
+    if (window.confirm("⚠️ ¿Estás seguro de eliminar esta noticia?")) {
       try {
         await deleteDoc(doc(db, "noticias", article.id));
         showNotification("Noticia eliminada correctamente");
@@ -461,7 +457,7 @@ export default function App() {
   };
 
   const resetForm = () => {
-    setEditingId(null); setTitle(''); setImage(''); setCategory('General'); setAuthor('Redacción NTR');
+    setEditingId(null); setTitle(''); setImage(''); setCategory('General'); setAuthor('Anónimo');
     setContentBlocks([{ id: Date.now(), type: 'text', value: '' }]);
   };
 
@@ -495,7 +491,7 @@ export default function App() {
   const handleEditCommentImageUpload = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      setIsCompressingComment(true); 
+      setIsCompressingComment(true);
       const res = await compressImage(file);
       setEditCommentImage(res);
       setIsCompressingComment(false);
@@ -520,7 +516,7 @@ export default function App() {
 
   const saveEditedComment = async () => {
     try {
-      const updated = selectedArticle.comments.map(c => 
+      const updated = selectedArticle.comments.map(c =>
         c.id === editingCommentId ? { ...c, author: editCommentAuthor, text: editCommentText, image: editCommentImage } : c
       );
       await updateDoc(doc(db, "noticias", selectedArticle.id), { comments: updated });
@@ -556,7 +552,7 @@ export default function App() {
     ));
   };
 
-  if (checkingMaintenance) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><Loader2 className="animate-spin text-blue-900" size={40}/></div>;
+  if (checkingMaintenance) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><Loader2 className="animate-spin text-blue-900" size={40} /></div>;
 
   if (isMaintenance) {
     return (
@@ -587,20 +583,19 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-800 pb-12 relative overflow-x-hidden">
-      
+
       {/* --- NOTIFICACIÓN ANIMADA (ARRIBA Y CENTRO, SOLO AZUL) --- */}
       {notification.show && (
-        <div 
-          className={`fixed top-6 left-1/2 z-[100] px-6 py-3.5 rounded-full shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)] flex items-center gap-3 transition-all duration-400 ease-out transform bg-gradient-to-r from-blue-600 to-blue-900 text-white border border-blue-400/50 ${
-            notification.isVisible 
-              ? '-translate-x-1/2 translate-y-0 opacity-100 scale-100' 
-              : '-translate-x-1/2 -translate-y-24 opacity-0 scale-95'
-          }`}
+        <div
+          className={`fixed top-6 left-1/2 z-[100] px-6 py-3.5 rounded-full shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)] flex items-center gap-3 transition-all duration-400 ease-out transform bg-gradient-to-r from-blue-600 to-blue-900 text-white border border-blue-400/50 ${notification.isVisible
+            ? '-translate-x-1/2 translate-y-0 opacity-100 scale-100'
+            : '-translate-x-1/2 -translate-y-24 opacity-0 scale-95'
+            }`}
         >
           {notification.type === 'success' ? <CheckCircle size={20} className="text-blue-100" /> : <AlertTriangle size={20} className="text-blue-100" />}
           <span className="font-bold tracking-wide text-sm whitespace-nowrap">{notification.message}</span>
-          <button 
-            onClick={closeNotification} 
+          <button
+            onClick={closeNotification}
             className="ml-2 hover:bg-white/20 p-1 rounded-full transition-colors focus:outline-none"
           >
             <X size={14} />
@@ -655,7 +650,7 @@ export default function App() {
             </div>
             <h1 onDoubleClick={handleAdminTrigger} className="text-xl font-bold tracking-tight text-gray-700 hidden sm:block">Zacatecas</h1>
           </div>
-          
+
           <div className="flex items-center gap-4">
             {isAdmin && <div className="hidden sm:flex items-center gap-2 bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold animate-pulse"><Lock size={12} /> ADMIN</div>}
             {isEditMode && !isAdmin && <div className="hidden sm:flex items-center gap-2 bg-blue-100 text-blue-900 px-3 py-1 rounded-full text-xs font-bold animate-pulse"><Edit size={12} /> EDICIÓN</div>}
@@ -666,8 +661,8 @@ export default function App() {
               <button onClick={() => { resetForm(); setView('create'); }} className={`px-4 py-2 rounded-full font-bold text-sm transition-all flex items-center gap-2 ${view === 'create' ? `${ntrBlue} text-white shadow-lg` : 'text-gray-500 hover:bg-gray-50'}`}>
                 <PlusCircle size={18} /> <span className="hidden sm:inline">Redacción</span>
               </button>
-              {isAdmin && <button onClick={() => {signOut(auth); showNotification("Sesión cerrada", "error");}} className="p-2 text-gray-400 hover:text-red-600"><LogOut size={18} /></button>}
-              {isEditMode && !isAdmin && <button onClick={() => {setIsEditMode(false); showNotification("Saliste del modo edición", "error");}} className="p-2 text-gray-400 hover:text-blue-600" title="Salir de Modo Edición"><LogOut size={18} /></button>}
+              {isAdmin && <button onClick={() => { signOut(auth); showNotification("Sesión cerrada", "error"); }} className="p-2 text-gray-400 hover:text-red-600"><LogOut size={18} /></button>}
+              {isEditMode && !isAdmin && <button onClick={() => { setIsEditMode(false); showNotification("Saliste del modo edición", "error"); }} className="p-2 text-gray-400 hover:text-blue-600" title="Salir de Modo Edición"><LogOut size={18} /></button>}
             </nav>
           </div>
         </div>
@@ -689,8 +684,8 @@ export default function App() {
                       <div className="flex items-center text-gray-400 text-xs mb-3 gap-2"><Calendar size={14} /> <span>{article.date}</span></div>
                       <h3 className="text-xl font-bold mb-3 group-hover:text-blue-900 line-clamp-3">{article.title}</h3>
                       <p className="text-gray-600 text-sm line-clamp-3 mb-4">
-                        {Array.isArray(article.content) 
-                          ? (article.content.find(b => b.type === 'text')?.value || "Ver fotos...") 
+                        {Array.isArray(article.content)
+                          ? (article.content.find(b => b.type === 'text')?.value || "Ver fotos...")
                           : article.content}
                       </p>
                     </div>
@@ -710,15 +705,15 @@ export default function App() {
                 </article>
               ))}
             </div>
-            
+
             {/* TEXTO DE RESPONSABILIDAD */}
             {articles.length > 0 && (
               <div className="mt-16 pt-8 border-t border-gray-200 text-center flex flex-col md:flex-row items-center justify-center gap-2 md:gap-4 pb-4">
                 <p className="text-xs text-gray-400 font-medium tracking-wide">
                   Las noticias y publicaciones son responsabilidad de quien las lee y de quien las publica.
                 </p>
-                <button 
-                  onClick={() => { setView('terms'); window.scrollTo(0, 0); }} 
+                <button
+                  onClick={() => { setView('terms'); window.scrollTo(0, 0); }}
                   className="text-xs text-blue-600 hover:text-blue-800 font-bold transition-colors flex items-center gap-1"
                 >
                   <FileText size={14} />
@@ -735,9 +730,9 @@ export default function App() {
             <button onClick={() => setView('home')} className="mb-8 flex items-center gap-2 text-gray-500 hover:text-blue-900 transition-colors font-bold">
               <ArrowLeft size={20} /> Volver al inicio
             </button>
-            
+
             <h1 className={`text-3xl md:text-4xl font-black mb-8 ${ntrText} border-b pb-4`}>Términos y Condiciones de Uso y Aviso Legal</h1>
-            
+
             <div className="prose prose-lg text-gray-700 max-w-none space-y-6">
               <p>Bienvenido al portal de <strong>Avisos Ciudadanos</strong>. Al acceder, navegar y utilizar esta plataforma, aceptas estar sujeto a las siguientes disposiciones legales. Si no estás de acuerdo con ellas, te invitamos a abandonar el sitio.</p>
 
@@ -764,11 +759,11 @@ export default function App() {
               <h3 className="text-xl font-bold text-gray-900 mt-8 mb-3">7. Modificaciones a los Términos y Condiciones</h3>
               <p>Nos reservamos el derecho exclusivo de modificar, actualizar, añadir o eliminar porciones de estos Términos y Condiciones en cualquier momento y sin previo aviso. Es responsabilidad del usuario revisar periódicamente esta sección. El acceso o uso continuo de la plataforma después de la publicación de dichos cambios constituye la aceptación vinculante a las modificaciones realizadas.</p>
             </div>
-            
+
             <div className="mt-12 pt-8 border-t text-center">
-               <button onClick={() => setView('home')} className={`${ntrBlue} text-white px-8 py-3 rounded-full font-bold shadow-lg hover:shadow-xl hover:scale-105 transition-all`}>
-                 Volver al inicio
-               </button>
+              <button onClick={() => setView('home')} className={`${ntrBlue} text-white px-8 py-3 rounded-full font-bold shadow-lg hover:shadow-xl hover:scale-105 transition-all`}>
+                Volver al inicio
+              </button>
             </div>
           </div>
         )}
@@ -777,14 +772,14 @@ export default function App() {
         {view === 'create' && (
           <div className="max-w-3xl mx-auto animate-in slide-in-from-bottom-4 duration-500">
             <div className="bg-white rounded-xl shadow-xl p-8 border border-gray-100">
-              <h2 className={`text-2xl font-bold flex items-center mb-6 ${ntrText}`}>{editingId ? <Edit size={28} className="mr-3"/> : <PlusCircle size={28} className="mr-3"/>} Panel de Redacción</h2>
+              <h2 className={`text-2xl font-bold flex items-center mb-6 ${ntrText}`}>{editingId ? <Edit size={28} className="mr-3" /> : <PlusCircle size={28} className="mr-3" />} Panel de Redacción</h2>
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="col-span-1 md:col-span-2"><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Titular</label><input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full p-4 bg-gray-50 border border-gray-200 rounded-lg font-bold text-lg outline-none focus:ring-2 focus:ring-blue-800" required /></div>
                   <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Autor</label><input type="text" value={author} onChange={(e) => setAuthor(e.target.value)} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg outline-none" /></div>
                   <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Sección</label><select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg outline-none"><option>General</option><option>Tecnología</option><option>Deportes</option><option>Arte</option><option>Política</option><option>Seguridad</option><option>Municipios</option></select></div>
                 </div>
-                
+
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase mb-3">Imagen de Portada</label>
                   <div className="p-4 border-2 border-dashed rounded-xl bg-gray-50">
@@ -792,7 +787,7 @@ export default function App() {
                       <div className="space-y-4">
                         <div className="flex justify-center">
                           <label className="cursor-pointer flex flex-col items-center gap-2 text-gray-500">
-                            {isCompressing ? <Loader2 className="animate-spin text-blue-900" /> : <React.Fragment><Upload size={32}/><span className="font-medium text-gray-500">Subir Portada</span></React.Fragment>}
+                            {isCompressing ? <Loader2 className="animate-spin text-blue-900" /> : <React.Fragment><Upload size={32} /><span className="font-medium text-gray-500">Subir Portada</span></React.Fragment>}
                             <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
                           </label>
                         </div>
@@ -824,20 +819,20 @@ export default function App() {
                       {block.type === 'text' ? (
                         <div className="relative">
                           <AlignLeft className="absolute top-3 left-3 text-gray-400" size={16} />
-                          <textarea 
-                            value={block.value} 
-                            onChange={(e) => updateBlockValue(block.id, e.target.value)} 
-                            rows="5" 
-                            className="w-full p-3 pl-10 pr-12 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:bg-white transition-all leading-relaxed" 
-                            placeholder={`Escribe aquí tu idea para la sección ${category}...`} 
+                          <textarea
+                            value={block.value}
+                            onChange={(e) => updateBlockValue(block.id, e.target.value)}
+                            rows="5"
+                            className="w-full p-3 pl-10 pr-12 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:bg-white transition-all leading-relaxed"
+                            placeholder={`Escribe aquí tu idea para la sección ${category}...`}
                           />
-                          <button 
-                            type="button" 
-                            onClick={() => handleAiRewriteBlock(block.id, block.value)} 
-                            disabled={activeAiBlockId === block.id} 
+                          <button
+                            type="button"
+                            onClick={() => handleAiRewriteBlock(block.id, block.value)}
+                            disabled={activeAiBlockId === block.id}
                             className={`absolute bottom-3 right-3 p-2 rounded-full shadow-md transition-all ${activeAiBlockId === block.id ? 'bg-gray-100 text-gray-400' : 'bg-gradient-to-br from-indigo-600 to-blue-600 text-white hover:scale-110 active:scale-95'}`}
                           >
-                            {activeAiBlockId === block.id ? <Loader2 className="animate-spin" size={16}/> : <Sparkles size={16}/>}
+                            {activeAiBlockId === block.id ? <Loader2 className="animate-spin" size={16} /> : <Sparkles size={16} />}
                           </button>
                         </div>
                       ) : (
@@ -883,7 +878,7 @@ export default function App() {
                   </button>
                 </div>
               </form>
-              
+
               {!isAdmin && (
                 <div className="mt-10 pt-8 border-t flex flex-col items-center text-center pb-8">
                   <h3 className="text-lg font-bold text-gray-800 mb-2">Mis Publicaciones</h3>
@@ -909,21 +904,21 @@ export default function App() {
                 <div className="absolute bottom-0 left-0 p-8 w-full pointer-events-none">
                   <span className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-bold mb-4 inline-block">{selectedArticle.category}</span>
                   <h1 className="text-4xl md:text-5xl font-bold text-white leading-tight mb-2 drop-shadow-lg">{selectedArticle.title}</h1>
-                  <div className="flex items-center text-gray-200 text-sm gap-4"><span className="flex items-center gap-2"><User size={16}/> {selectedArticle.author || "Redacción NTR"}</span><span className="flex items-center gap-2"><Calendar size={16}/> {selectedArticle.date}</span></div>
+                  <div className="flex items-center text-gray-200 text-sm gap-4"><span className="flex items-center gap-2"><User size={16} /> {selectedArticle.author || "Redacción NTR"}</span><span className="flex items-center gap-2"><Calendar size={16} /> {selectedArticle.date}</span></div>
                 </div>
               </div>
               <div className="p-8 md:p-12">
                 {(isAdmin || isEditMode) && canManageArticle(selectedArticle) && (
                   <div className="mb-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex gap-4 items-center justify-between">
-                     <span className="text-yellow-800 font-bold flex items-center gap-2">{isAdmin ? <><Lock size={16}/> Admin</> : <><Edit size={16}/> Tu Nota</>}</span>
-                     <div className="flex gap-2">
-                       <button onClick={(e) => handleEdit(e, selectedArticle)} className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg font-bold hover:bg-blue-200 transition-colors">Editar</button>
-                       <button onClick={(e) => handleDelete(e, selectedArticle)} className="px-4 py-2 bg-red-100 text-red-700 rounded-lg font-bold hover:bg-red-200 transition-colors">Borrar</button>
-                     </div>
+                    <span className="text-yellow-800 font-bold flex items-center gap-2">{isAdmin ? <><Lock size={16} /> Admin</> : <><Edit size={16} /> Tu Nota</>}</span>
+                    <div className="flex gap-2">
+                      <button onClick={(e) => handleEdit(e, selectedArticle)} className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg font-bold hover:bg-blue-200 transition-colors">Editar</button>
+                      <button onClick={(e) => handleDelete(e, selectedArticle)} className="px-4 py-2 bg-red-100 text-red-700 rounded-lg font-bold hover:bg-red-200 transition-colors">Borrar</button>
+                    </div>
                   </div>
                 )}
                 <div className="prose prose-lg max-w-none text-gray-700 leading-relaxed mb-12">{renderArticleContent(selectedArticle.content)}</div>
-                
+
                 {/* --- SECCIÓN DE COMENTARIOS --- */}
                 <div className="border-t border-gray-200 pt-10">
                   <h3 className={`text-2xl font-bold ${ntrText} mb-8 flex items-center gap-2`}>
@@ -936,19 +931,19 @@ export default function App() {
                         if (editingCommentId === comment.id) {
                           return (
                             <div key={idx} className="bg-white p-6 rounded-xl border-2 border-blue-200 relative shadow-sm">
-                              <h5 className="font-bold text-sm mb-3 text-blue-900 flex items-center gap-2"><Edit size={14}/> Editando comentario</h5>
-                              <input type="text" value={editCommentAuthor} onChange={(e) => setEditCommentAuthor(e.target.value)} className="w-full p-2 mb-2 border border-gray-300 rounded-lg outline-none focus:border-blue-500" placeholder="Nombre del autor"/>
-                              <textarea value={editCommentText} onChange={(e) => setEditCommentText(e.target.value)} className="w-full p-2 mb-2 border border-gray-300 rounded-lg min-h-[80px] outline-none focus:border-blue-500 resize-y" placeholder="Comentario"/>
-                              
+                              <h5 className="font-bold text-sm mb-3 text-blue-900 flex items-center gap-2"><Edit size={14} /> Editando comentario</h5>
+                              <input type="text" value={editCommentAuthor} onChange={(e) => setEditCommentAuthor(e.target.value)} className="w-full p-2 mb-2 border border-gray-300 rounded-lg outline-none focus:border-blue-500" placeholder="Nombre del autor" />
+                              <textarea value={editCommentText} onChange={(e) => setEditCommentText(e.target.value)} className="w-full p-2 mb-2 border border-gray-300 rounded-lg min-h-[80px] outline-none focus:border-blue-500 resize-y" placeholder="Comentario" />
+
                               <div className="flex gap-2 items-center mb-4">
                                 {editCommentImage && (
                                   <div className="relative inline-block">
                                     <img src={editCommentImage} className="h-16 w-auto rounded border border-gray-200 object-cover" alt="edit" />
-                                    <button onClick={() => setEditCommentImage('')} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"><X size={10}/></button>
+                                    <button onClick={() => setEditCommentImage('')} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"><X size={10} /></button>
                                   </div>
                                 )}
                                 <button onClick={() => editCommentFileInputRef.current.click()} className="text-gray-600 hover:text-blue-800 bg-gray-100 hover:bg-gray-200 p-2 rounded-lg text-sm flex items-center gap-2 transition-colors">
-                                  <ImageIcon size={16}/> {editCommentImage ? "Cambiar foto" : "Añadir foto"}
+                                  <ImageIcon size={16} /> {editCommentImage ? "Cambiar foto" : "Añadir foto"}
                                 </button>
                                 <input type="file" ref={editCommentFileInputRef} className="hidden" accept="image/*" onChange={handleEditCommentImageUpload} />
                               </div>
@@ -976,7 +971,7 @@ export default function App() {
                             {comment.image && (
                               <div className="mt-3 rounded-lg overflow-hidden border border-gray-200 max-w-sm relative group/img">
                                 <img src={comment.image} alt="Adjunto del comentario" className="w-full h-auto object-cover" />
-                                <button 
+                                <button
                                   onClick={() => setFullScreenImage(comment.image)}
                                   className="absolute bottom-2 right-2 bg-black/50 hover:bg-black/70 text-white p-1.5 rounded-full backdrop-blur-sm opacity-0 group-hover/img:opacity-100 transition-all shadow-md"
                                   title="Ver en grande"
@@ -987,14 +982,14 @@ export default function App() {
                             )}
                             {isAdmin && (
                               <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button 
+                                <button
                                   onClick={() => startEditingComment(comment)}
                                   className="text-blue-400 hover:text-blue-600 bg-white shadow-sm border border-blue-100 transition-colors p-1.5 rounded"
                                   title="Editar Comentario"
                                 >
                                   <Edit size={14} />
                                 </button>
-                                <button 
+                                <button
                                   onClick={() => handleDeleteComment(comment)}
                                   className="text-red-400 hover:text-red-600 bg-white shadow-sm border border-red-100 transition-colors p-1.5 rounded"
                                   title="Borrar Comentario"
@@ -1017,26 +1012,26 @@ export default function App() {
                       <input type="text" placeholder="Tu nombre" value={commentName} onChange={(e) => setCommentName(e.target.value)} className="p-3 rounded-lg border border-gray-200 focus:border-blue-500 outline-none w-full" />
                       <div className="md:col-span-2 relative">
                         <div className="relative">
-                          <textarea 
-                            placeholder="Escribe tu comentario..." 
-                            value={commentText} 
-                            onChange={(e) => setCommentText(e.target.value)} 
+                          <textarea
+                            placeholder="Escribe tu comentario..."
+                            value={commentText}
+                            onChange={(e) => setCommentText(e.target.value)}
                             className="p-3 rounded-lg border border-gray-200 focus:border-blue-500 outline-none w-full min-h-[80px] pr-12 resize-y"
                           />
-                          <button 
-                            type="button" 
+                          <button
+                            type="button"
                             onClick={() => commentFileInputRef.current.click()}
                             className="absolute bottom-3 right-3 text-gray-400 hover:text-blue-600 transition-colors p-1"
                             title="Adjuntar foto"
                           >
                             <ImageIcon size={20} />
                           </button>
-                          <input 
-                            type="file" 
-                            ref={commentFileInputRef} 
-                            className="hidden" 
-                            accept="image/*" 
-                            onChange={handleCommentImageUpload} 
+                          <input
+                            type="file"
+                            ref={commentFileInputRef}
+                            className="hidden"
+                            accept="image/*"
+                            onChange={handleCommentImageUpload}
                           />
                         </div>
                         {isCompressingComment && <div className="mt-2 text-xs text-blue-600 flex items-center gap-1">Procesando imagen...</div>}
@@ -1056,7 +1051,7 @@ export default function App() {
           </div>
         )}
       </main>
-      <button onClick={handleAdminTrigger} className="fixed bottom-4 right-4 text-gray-300 opacity-20 hover:opacity-100 transition-opacity z-50"><KeyRound size={16}/></button>
+      <button onClick={handleAdminTrigger} className="fixed bottom-4 right-4 text-gray-300 opacity-20 hover:opacity-100 transition-opacity z-50"><KeyRound size={16} /></button>
     </div>
   );
 }
