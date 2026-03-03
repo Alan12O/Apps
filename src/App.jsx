@@ -25,13 +25,21 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
-// --- RECURSOS DE EJEMPLO ---
+// --- RECURSOS DE EJEMPLO (DINÁMICOS) ---
+// Usando un servicio de imágenes aleatorias por categoría
 const presetImages = [
-  { name: "Tecnología", url: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&auto=format&fit=crop&q=60", icon: <Cpu size={16} /> },
-  { name: "Negocios", url: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&auto=format&fit=crop&q=60", icon: <Briefcase size={16} /> },
-  { name: "Mundo", url: "https://images.unsplash.com/photo-1521295121783-8a321d551ad2?w=800&auto=format&fit=crop&q=60", icon: <Globe size={16} /> },
-  { name: "Arte", url: "https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=800&auto=format&fit=crop&q=60", icon: <Palette size={16} /> }
+  { name: "General", keyword: "news,journalism", icon: <Globe size={16} /> },
+  { name: "Tecnología", keyword: "technology,software", icon: <Cpu size={16} /> },
+  { name: "Deportes", keyword: "sports,athletics", icon: <Calendar size={16} /> }, // Usando icon genérico temporal
+  { name: "Arte", keyword: "art,culture", icon: <Palette size={16} /> },
+  { name: "Negocios", keyword: "business,finance", icon: <Briefcase size={16} /> },
+  { name: "Política", keyword: "politics,government", icon: <Briefcase size={16} /> }
 ];
+
+// Función helper para generar la URL dinámica evadiendo la caché del navegador
+const getRandomImageUrl = (keyword) => {
+  return `https://loremflickr.com/800/600/${keyword}?lock=${Math.floor(Math.random() * 1000)}`;
+};
 
 export default function App() {
   const [articles, setArticles] = useState([]);
@@ -915,9 +923,9 @@ export default function App() {
                             <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
                           </label>
                         </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
                           {presetImages.map((preset, pidx) => (
-                            <button type="button" key={`p-${pidx}`} onClick={() => setImage(preset.url)} className="text-xs p-2 rounded-lg border bg-white flex flex-col items-center gap-2 hover:border-blue-900 transition-colors">
+                            <button type="button" key={`p-${pidx}`} onClick={() => setImage(getRandomImageUrl(preset.keyword))} className="text-xs p-2 rounded-lg border bg-white flex flex-col items-center justify-center text-center gap-2 hover:border-blue-900 hover:bg-blue-50 transition-colors">
                               {preset.icon} {preset.name}
                             </button>
                           ))}
