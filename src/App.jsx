@@ -761,6 +761,32 @@ export default function App() {
                   </article>
                 ))
               )}
+
+              {/* ESQUELETOS AL HACER SCROLL O PAGINACIÓN (Se agregan al final de las reales) */}
+              {!loading && articles.length > 0 && articles.length < displayLimit && hasMore && (
+                Array.from({ length: Math.min(9, displayLimit - articles.length) }).map((_, i) => (
+                  <article key={`more-skeleton-${i}`} className="bg-white rounded-xl shadow-sm border flex flex-col h-full relative overflow-hidden">
+                    <div className="relative h-56 bg-gray-200 animate-pulse"></div>
+                    <div className="p-6 flex-grow flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center gap-2 mb-3"><div className="w-4 h-4 rounded bg-gray-200 animate-pulse"></div><div className="h-3 w-20 bg-gray-200 rounded animate-pulse"></div></div>
+                        <div className="h-6 bg-gray-200 rounded animate-pulse w-full mb-2"></div>
+                        <div className="h-6 bg-gray-200 rounded animate-pulse w-3/4 mb-4"></div>
+                        <div className="space-y-2">
+                          <div className="h-3 bg-gray-200 rounded animate-pulse w-full"></div>
+                          <div className="h-3 bg-gray-200 rounded animate-pulse w-full"></div>
+                          <div className="h-3 bg-gray-200 rounded animate-pulse w-4/5"></div>
+                        </div>
+                      </div>
+                      <div className="pt-4 border-t flex justify-between items-center mt-6">
+                        <div className="h-4 bg-gray-200 rounded animate-pulse w-24"></div>
+                        <div className="h-4 bg-gray-200 rounded animate-pulse w-8"></div>
+                      </div>
+                    </div>
+                  </article>
+                ))
+              )}
+
             </div>
 
             {/* BOTÓN SIGUIENTE PÁGINA O SPINNER SCROLL */}
