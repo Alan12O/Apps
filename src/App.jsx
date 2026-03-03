@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Routes, Route, Link, useNavigate, useLocation, useParams } from 'react-router-dom';
 import {
   PlusCircle, Trash2, Calendar, Image as ImageIcon, Send, Globe,
   Briefcase, Cpu, Palette, Upload, ArrowLeft, Home, MessageSquare, User, X,
@@ -10,7 +11,7 @@ import {
 import { initializeApp } from "firebase/app";
 import {
   getFirestore, collection, addDoc, onSnapshot,
-  deleteDoc, doc, updateDoc, arrayUnion, arrayRemove, query, orderBy, limit
+  deleteDoc, doc, updateDoc, arrayUnion, arrayRemove, query, orderBy, limit, getDoc
 } from "firebase/firestore";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, signInAnonymously } from "firebase/auth";
 
@@ -68,11 +69,10 @@ export default function App() {
 
   const [isMaintenance, setIsMaintenance] = useState(false);
   const [checkingMaintenance, setCheckingMaintenance] = useState(true);
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [passwordInput, setPasswordInput] = useState('');
-  const [loginError, setLoginError] = useState('');
-  const [view, setView] = useState('home');
   const [selectedArticle, setSelectedArticle] = useState(null);
+
+  const navigate = useNavigate();
+  const location = useLocation();
   const [showNtrLogo, setShowNtrLogo] = useState(false);
   const [fullScreenImage, setFullScreenImage] = useState(null);
 
@@ -272,6 +272,32 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    const fetchArticleFromUrl = async () => {
+      const match = location.pathname.match(/^\/noticia\/(.+)$/);
+      if (match) {
+        const urlId = match[1];
+        if (!selectedArticle || selectedArticle.id !== urlId) {
+          try {
+            const docRef = doc(db, "noticias", urlId);
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+              setSelectedArticle({ id: docSnap.id, ...docSnap.data(), comments: docSnap.data().comments || [] });
+            } else {
+              showNotification("La noticia no existe", "error");
+              navigate("/");
+            }
+          } catch (error) {
+            console.error("Error cargando noticia directa:", error);
+          }
+        }
+      } else {
+        if (selectedArticle) setSelectedArticle(null);
+      }
+    };
+    fetchArticleFromUrl();
+  }, [location.pathname]);
+
+  useEffect(() => {
     if (!currentUser) return;
 
     // Si no hay artículos todavía, forzamos que se muestre el esqueleto base
@@ -390,7 +416,7 @@ export default function App() {
 
   const handleLogoClick = (e) => {
     if (e.detail === 3) { e.preventDefault(); setShowNtrLogo(!showNtrLogo); }
-    else { if (view !== 'home') setView('home'); }
+    else { navigate('/'); }
   };
 
   const handleAdminTrigger = (e) => {
@@ -464,7 +490,7 @@ export default function App() {
     setImage(article.image);
     setAuthor(article.author || "Anónimo");
     setContentBlocks(Array.isArray(article.content) ? article.content : [{ id: Date.now(), type: 'text', value: article.content }]);
-    setView('create');
+    navigate('/redaccion');
   };
 
   const handleSubmit = async (e) => {
@@ -493,7 +519,7 @@ export default function App() {
         showNotification("¡Noticia publicada exitosamente!");
       }
       resetForm();
-      setView('home');
+      navigate('/');
     } catch (error) {
       console.error(error);
       showNotification("Error al guardar la noticia", "error");
@@ -509,7 +535,7 @@ export default function App() {
       try {
         await deleteDoc(doc(db, "noticias", article.id));
         showNotification("Noticia eliminada correctamente");
-        if (selectedArticle?.id === article.id) setView('home');
+        if (location.pathname.startsWith('/noticia/')) navigate('/');
       } catch (error) {
         showNotification("Error al eliminar la noticia", "error");
       }
@@ -590,7 +616,8 @@ export default function App() {
 
   const openArticle = (article) => {
     setSelectedArticle({ ...article, comments: article.comments || [] });
-    setView('article'); window.scrollTo(0, 0);
+    navigate(`/noticia/${article.id}`);
+    window.scrollTo(0, 0);
   };
 
   const renderArticleContent = (contentData) => {
@@ -715,12 +742,12 @@ export default function App() {
             {isAdmin && <div className="hidden sm:flex items-center gap-2 bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold animate-pulse"><Lock size={12} /> ADMIN</div>}
             {isEditMode && !isAdmin && <div className="hidden sm:flex items-center gap-2 bg-blue-100 text-blue-900 px-3 py-1 rounded-full text-xs font-bold animate-pulse"><Edit size={12} /> EDICIÓN</div>}
             <nav className="flex items-center gap-2 sm:gap-4">
-              <button onClick={() => setView('home')} className={`px-4 py-2 rounded-full font-bold text-sm transition-all flex items-center gap-2 ${view === 'home' || view === 'article' || view === 'terms' ? 'bg-gray-100 text-blue-900' : 'text-gray-500 hover:bg-gray-50'}`}>
+              <Link to="/" className={`px-4 py-2 rounded-full font-bold text-sm transition-all flex items-center gap-2 ${location.pathname === '/' || location.pathname.startsWith('/noticia/') || location.pathname === '/terminos' ? 'bg-gray-100 text-blue-900' : 'text-gray-500 hover:bg-gray-50'}`}>
                 <Home size={18} /> <span className="hidden sm:inline">Inicio</span>
-              </button>
-              <button onClick={() => { resetForm(); setView('create'); }} className={`px-4 py-2 rounded-full font-bold text-sm transition-all flex items-center gap-2 ${view === 'create' ? `${ntrBlue} text-white shadow-lg` : 'text-gray-500 hover:bg-gray-50'}`}>
+              </Link>
+              <Link to="/redaccion" onClick={resetForm} className={`px-4 py-2 rounded-full font-bold text-sm transition-all flex items-center gap-2 ${location.pathname === '/redaccion' ? `${ntrBlue} text-white shadow-lg` : 'text-gray-500 hover:bg-gray-50'}`}>
                 <PlusCircle size={18} /> <span className="hidden sm:inline">Redacción</span>
-              </button>
+              </Link>
               {isAdmin && <button onClick={() => { signOut(auth); showNotification("Sesión cerrada", "error"); }} className="p-2 text-gray-400 hover:text-red-600"><LogOut size={18} /></button>}
               {isEditMode && !isAdmin && <button onClick={() => { setIsEditMode(false); showNotification("Saliste del modo edición", "error"); }} className="p-2 text-gray-400 hover:text-blue-600" title="Salir de Modo Edición"><LogOut size={18} /></button>}
             </nav>
@@ -729,470 +756,482 @@ export default function App() {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-8">
-        {/* --- PANTALLA PRINCIPAL --- */}
-        {view === 'home' && (
-          <div className="animate-in fade-in duration-500 flex flex-col min-h-[calc(100vh-200px)]">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 flex-grow">
-              {loading ? (
-                // ESQUELETOS DE CARGA (SKELETONS)
-                Array.from({ length: 9 }).map((_, i) => (
-                  <article key={`skeleton-${i}`} className="bg-white rounded-xl shadow-sm border flex flex-col h-full relative overflow-hidden">
-                    <div className="relative h-56 bg-gray-200 animate-pulse"></div>
-                    <div className="p-6 flex-grow flex flex-col justify-between">
-                      <div>
-                        <div className="flex items-center gap-2 mb-3"><div className="w-4 h-4 rounded bg-gray-200 animate-pulse"></div><div className="h-3 w-20 bg-gray-200 rounded animate-pulse"></div></div>
-                        <div className="h-6 bg-gray-200 rounded animate-pulse w-full mb-2"></div>
-                        <div className="h-6 bg-gray-200 rounded animate-pulse w-3/4 mb-4"></div>
-                        <div className="space-y-2">
-                          <div className="h-3 bg-gray-200 rounded animate-pulse w-full"></div>
-                          <div className="h-3 bg-gray-200 rounded animate-pulse w-full"></div>
-                          <div className="h-3 bg-gray-200 rounded animate-pulse w-4/5"></div>
-                        </div>
-                      </div>
-                      <div className="pt-4 border-t flex justify-between items-center mt-6">
-                        <div className="h-4 bg-gray-200 rounded animate-pulse w-24"></div>
-                        <div className="h-4 bg-gray-200 rounded animate-pulse w-8"></div>
-                      </div>
-                    </div>
-                  </article>
-                ))
-              ) : (
-                // ARTÍCULOS REALES
-                articles.map((article) => (
-                  <article key={article.id} onClick={() => openArticle(article)} className="bg-white rounded-xl shadow-sm hover:shadow-2xl transition-all border group cursor-pointer flex flex-col h-full relative">
-                    <div className="relative h-56 overflow-hidden">
-                      <img src={article.image} alt={article.title} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
-                      <div className="absolute top-4 left-4"><span className={`${ntrBlue} text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg uppercase`}>{article.category}</span></div>
-                    </div>
-                    <div className="p-6 flex-grow flex flex-col justify-between">
-                      <div>
-                        <div className="flex items-center text-gray-400 text-xs mb-3 gap-2"><Calendar size={14} /> <span>{article.date}</span></div>
-                        <h3 className="text-xl font-bold mb-3 group-hover:text-blue-900 line-clamp-3">{article.title}</h3>
-                        <p className="text-gray-600 text-sm line-clamp-3 mb-4">
-                          {Array.isArray(article.content)
-                            ? (article.content.find(b => b.type === 'text')?.value || "Ver fotos...")
-                            : article.content}
-                        </p>
-                      </div>
-                      <div className="pt-4 border-t flex justify-between items-center mt-auto">
-                        <div className="flex items-center gap-4">
-                          <span className={`text-sm font-bold ${ntrText} flex items-center`}>Leer nota completa</span>
-                          <div className="flex items-center text-gray-400 text-xs gap-1"><MessageSquare size={14} /><span>{(article.comments || []).length}</span></div>
-                        </div>
-                        {(isAdmin || isEditMode) && canManageArticle(article) && (
-                          <div className="flex gap-2">
-                            <button onClick={(e) => { e.stopPropagation(); handleEdit(e, article); }} className="text-blue-500 p-1 bg-blue-50 rounded"><Edit size={16} /></button>
-                            <button onClick={(e) => handleDelete(e, article)} className="text-red-400 p-1 bg-red-50 rounded"><Trash2 size={16} /></button>
+        <Routes>
+          {/* --- PANTALLA PRINCIPAL --- */}
+          <Route path="/" element={
+            <div className="animate-in fade-in duration-500 flex flex-col min-h-[calc(100vh-200px)]">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 flex-grow">
+                {loading ? (
+                  // ESQUELETOS DE CARGA (SKELETONS)
+                  Array.from({ length: 9 }).map((_, i) => (
+                    <article key={`skeleton-${i}`} className="bg-white rounded-xl shadow-sm border flex flex-col h-full relative overflow-hidden">
+                      <div className="relative h-56 bg-gray-200 animate-pulse"></div>
+                      <div className="p-6 flex-grow flex flex-col justify-between">
+                        <div>
+                          <div className="flex items-center gap-2 mb-3"><div className="w-4 h-4 rounded bg-gray-200 animate-pulse"></div><div className="h-3 w-20 bg-gray-200 rounded animate-pulse"></div></div>
+                          <div className="h-6 bg-gray-200 rounded animate-pulse w-full mb-2"></div>
+                          <div className="h-6 bg-gray-200 rounded animate-pulse w-3/4 mb-4"></div>
+                          <div className="space-y-2">
+                            <div className="h-3 bg-gray-200 rounded animate-pulse w-full"></div>
+                            <div className="h-3 bg-gray-200 rounded animate-pulse w-full"></div>
+                            <div className="h-3 bg-gray-200 rounded animate-pulse w-4/5"></div>
                           </div>
-                        )}
-                      </div>
-                    </div>
-                  </article>
-                ))
-              )}
-
-              {/* ESQUELETOS AL HACER SCROLL O PAGINACIÓN (Se agregan al final de las reales) */}
-              {!loading && articles.length > 0 && isFetchingMore && (
-                Array.from({ length: 9 }).map((_, i) => (
-                  <article key={`more-skeleton-${i}`} className="bg-white rounded-xl shadow-sm border flex flex-col h-full relative overflow-hidden">
-                    <div className="relative h-56 bg-gray-200 animate-pulse"></div>
-                    <div className="p-6 flex-grow flex flex-col justify-between">
-                      <div>
-                        <div className="flex items-center gap-2 mb-3"><div className="w-4 h-4 rounded bg-gray-200 animate-pulse"></div><div className="h-3 w-20 bg-gray-200 rounded animate-pulse"></div></div>
-                        <div className="h-6 bg-gray-200 rounded animate-pulse w-full mb-2"></div>
-                        <div className="h-6 bg-gray-200 rounded animate-pulse w-3/4 mb-4"></div>
-                        <div className="space-y-2">
-                          <div className="h-3 bg-gray-200 rounded animate-pulse w-full"></div>
-                          <div className="h-3 bg-gray-200 rounded animate-pulse w-full"></div>
-                          <div className="h-3 bg-gray-200 rounded animate-pulse w-4/5"></div>
+                        </div>
+                        <div className="pt-4 border-t flex justify-between items-center mt-6">
+                          <div className="h-4 bg-gray-200 rounded animate-pulse w-24"></div>
+                          <div className="h-4 bg-gray-200 rounded animate-pulse w-8"></div>
                         </div>
                       </div>
-                      <div className="pt-4 border-t flex justify-between items-center mt-6">
-                        <div className="h-4 bg-gray-200 rounded animate-pulse w-24"></div>
-                        <div className="h-4 bg-gray-200 rounded animate-pulse w-8"></div>
-                      </div>
-                    </div>
-                  </article>
-                ))
-              )}
-
-            </div>
-
-            {/* BOTÓN SIGUIENTE PÁGINA O SPINNER SCROLL */}
-            {(hasMore || isFetchingMore) && (
-              <div className="mt-12 flex justify-center pb-8">
-                {displayLimit >= maxAutoLoad && !isFetchingMore ? (
-                  <button
-                    onClick={() => {
-                      setIsFetchingMore(true);
-                      setMaxAutoLoad(prev => prev + 36);
-                      setDisplayLimit(prev => prev + 9);
-                    }}
-                    className={`${ntrBlue} text-white px-8 py-3 rounded-full font-bold shadow-lg hover:shadow-xl hover:scale-105 transition-all outline-none`}
-                  >
-                    Ver Siguiente Página
-                  </button>
+                    </article>
+                  ))
                 ) : (
-                  <Loader2 className={`animate-spin text-blue-900 ${displayLimit >= maxAutoLoad ? 'hidden' : 'block'}`} size={32} />
+                  // ARTÍCULOS REALES
+                  articles.map((article) => (
+                    <article key={article.id} className="bg-white rounded-xl shadow-sm hover:shadow-2xl transition-all border group cursor-pointer flex flex-col h-full relative">
+                      <Link to={`/noticia/${article.id}`} className="block h-full cursor-pointer flex-grow flex flex-col">
+                        <div className="relative h-56 overflow-hidden">
+                          <img src={article.image} alt={article.title} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+                          <div className="absolute top-4 left-4"><span className={`${ntrBlue} text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg uppercase`}>{article.category}</span></div>
+                        </div>
+                        <div className="p-6 flex-grow flex flex-col justify-between">
+                          <div>
+                            <div className="flex items-center text-gray-400 text-xs mb-3 gap-2"><Calendar size={14} /> <span>{article.date}</span></div>
+                            <h3 className="text-xl font-bold mb-3 group-hover:text-blue-900 line-clamp-3">{article.title}</h3>
+                            <p className="text-gray-600 text-sm line-clamp-3 mb-4">
+                              {Array.isArray(article.content)
+                                ? (article.content.find(b => b.type === 'text')?.value || "Ver fotos...")
+                                : article.content}
+                            </p>
+                          </div>
+                          <div className="pt-4 border-t flex justify-between items-center mt-auto">
+                            <div className="flex items-center gap-4">
+                              <span className={`text-sm font-bold ${ntrText} flex items-center`}>Leer nota completa</span>
+                              <div className="flex items-center text-gray-400 text-xs gap-1"><MessageSquare size={14} /><span>{(article.comments || []).length}</span></div>
+                            </div>
+                            {(isAdmin || isEditMode) && canManageArticle(article) && (
+                              <div className="flex gap-2 relative z-20">
+                                <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleEdit(e, article); }} className="text-blue-500 p-1 bg-blue-50 rounded"><Edit size={16} /></button>
+                                <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDelete(e, article); }} className="text-red-400 p-1 bg-red-50 rounded"><Trash2 size={16} /></button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </Link>
+                    </article>
+                  ))
                 )}
-              </div>
-            )}
 
-            {/* TEXTO DE RESPONSABILIDAD */}
-            {articles.length > 0 && (
-              <div className={`mt-16 pt-8 border-t border-gray-200 text-center flex flex-col md:flex-row items-center justify-center gap-2 md:gap-4 pb-4 ${(hasMore || isFetchingMore) ? 'mt-8' : 'mt-16'}`}>
-                <p className="text-xs text-gray-400 font-medium tracking-wide">
-                  Las noticias y publicaciones son responsabilidad de quien las lee y de quien las publica.
+                {/* ESQUELETOS AL HACER SCROLL O PAGINACIÓN (Se agregan al final de las reales) */}
+                {!loading && articles.length > 0 && isFetchingMore && (
+                  Array.from({ length: 9 }).map((_, i) => (
+                    <article key={`more-skeleton-${i}`} className="bg-white rounded-xl shadow-sm border flex flex-col h-full relative overflow-hidden">
+                      <div className="relative h-56 bg-gray-200 animate-pulse"></div>
+                      <div className="p-6 flex-grow flex flex-col justify-between">
+                        <div>
+                          <div className="flex items-center gap-2 mb-3"><div className="w-4 h-4 rounded bg-gray-200 animate-pulse"></div><div className="h-3 w-20 bg-gray-200 rounded animate-pulse"></div></div>
+                          <div className="h-6 bg-gray-200 rounded animate-pulse w-full mb-2"></div>
+                          <div className="h-6 bg-gray-200 rounded animate-pulse w-3/4 mb-4"></div>
+                          <div className="space-y-2">
+                            <div className="h-3 bg-gray-200 rounded animate-pulse w-full"></div>
+                            <div className="h-3 bg-gray-200 rounded animate-pulse w-full"></div>
+                            <div className="h-3 bg-gray-200 rounded animate-pulse w-4/5"></div>
+                          </div>
+                        </div>
+                        <div className="pt-4 border-t flex justify-between items-center mt-6">
+                          <div className="h-4 bg-gray-200 rounded animate-pulse w-24"></div>
+                          <div className="h-4 bg-gray-200 rounded animate-pulse w-8"></div>
+                        </div>
+                      </div>
+                    </article>
+                  ))
+                )}
+
+              </div>
+
+              {/* BOTÓN SIGUIENTE PÁGINA O SPINNER SCROLL */}
+              {(hasMore || isFetchingMore) && (
+                <div className="mt-12 flex justify-center pb-8">
+                  {displayLimit >= maxAutoLoad && !isFetchingMore ? (
+                    <button
+                      onClick={() => {
+                        setIsFetchingMore(true);
+                        setMaxAutoLoad(prev => prev + 36);
+                        setDisplayLimit(prev => prev + 9);
+                      }}
+                      className={`${ntrBlue} text-white px-8 py-3 rounded-full font-bold shadow-lg hover:shadow-xl hover:scale-105 transition-all outline-none`}
+                    >
+                      Ver Siguiente Página
+                    </button>
+                  ) : (
+                    <Loader2 className={`animate-spin text-blue-900 ${displayLimit >= maxAutoLoad ? 'hidden' : 'block'}`} size={32} />
+                  )}
+                </div>
+              )}
+
+              {/* TEXTO DE RESPONSABILIDAD */}
+              {articles.length > 0 && (
+                <div className={`mt-16 pt-8 border-t border-gray-200 text-center flex flex-col md:flex-row items-center justify-center gap-2 md:gap-4 pb-4 ${(hasMore || isFetchingMore) ? 'mt-8' : 'mt-16'}`}>
+                  <p className="text-xs text-gray-400 font-medium tracking-wide">
+                    Las noticias y publicaciones son responsabilidad de quien las lee y de quien las publica.
+                  </p>
+                  <Link
+                    to="/terminos"
+                    onClick={() => window.scrollTo(0, 0)}
+                    className="text-xs text-blue-600 hover:text-blue-800 font-bold transition-colors flex items-center gap-1"
+                  >
+                    <FileText size={14} />
+                    Aviso Legal y Términos
+                  </Link>
+                </div>
+              )}
+            </div>
+          } />
+
+          {/* --- PANTALLA TÉRMINOS Y CONDICIONES --- */}
+          <Route path="/terminos" element={
+            <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-500 p-8 md:p-12 mb-12">
+              <Link to="/" className="mb-8 flex flex-wrap items-center gap-2 text-gray-500 hover:text-blue-900 transition-colors font-bold">
+                <ArrowLeft size={20} /> Volver al inicio
+              </Link>
+
+              <h1 className={`text-3xl md:text-4xl font-black mb-8 ${ntrText} border-b pb-4`}>Términos y Condiciones de Uso y Aviso Legal</h1>
+
+              <div className="prose prose-lg text-gray-700 max-w-none space-y-6">
+                <p>Bienvenido al portal de <strong>Avisos Ciudadanos</strong>. Al acceder, navegar y utilizar esta plataforma, aceptas estar sujeto a las siguientes disposiciones legales. Si no estás de acuerdo con ellas, te invitamos a abandonar el sitio.</p>
+
+                <h3 className="text-xl font-bold text-gray-900 mt-8 mb-3">1. Naturaleza de la Plataforma</h3>
+                <p>Esta plataforma es un medio tecnológico diseñado para facilitar el ejercicio del derecho a la libre manifestación de ideas y la libertad de difusión, consagrados en los <a href="https://www.diputados.gob.mx/LeyesBiblio/pdf/CPEUM.pdf" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline font-medium">Artículos 6º y 7º de la Constitución Política de los Estados Unidos Mexicanos</a>. Funciona exclusivamente como un tablero de avisos de acceso público y gratuito.</p>
+
+                <h3 className="text-xl font-bold text-gray-900 mt-8 mb-3">2. Intermediación Tecnológica y Ausencia de Responsabilidad Editorial</h3>
+                <p>La plataforma (así como sus creadores y administradores) actúa única y exclusivamente como un intermediario tecnológico (prestador de servicios de alojamiento de datos). <strong>No ejercemos control previo, no editamos, no aprobamos ni hacemos nuestro el contenido publicado por los usuarios</strong>. Toda noticia, aviso, denuncia o comentario refleja únicamente la opinión y responsabilidad inalienable de su autor.</p>
+
+                <h3 className="text-xl font-bold text-gray-900 mt-8 mb-3">3. Responsabilidad Exclusiva del Usuario</h3>
+                <p className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-900 font-medium">
+                  Con fundamento en el derecho aplicable, la responsabilidad legal, civil, penal o moral derivada de cualquier texto, imagen o comentario publicado recae de manera absoluta y exclusiva en la persona que lo emite. Quien lee y utiliza la información lo hace bajo su propio riesgo y criterio.
                 </p>
-                <button
-                  onClick={() => { setView('terms'); window.scrollTo(0, 0); }}
-                  className="text-xs text-blue-600 hover:text-blue-800 font-bold transition-colors flex items-center gap-1"
-                >
-                  <FileText size={14} />
-                  Aviso Legal y Términos
-                </button>
+
+                <h3 className="text-xl font-bold text-gray-900 mt-8 mb-3">4. Publicación Anónima y Protección de Datos</h3>
+                <p>En estricto apego y respeto a la privacidad de los denunciantes, el sistema permite la publicación de contenido de manera completamente anónima. No requerimos la creación de cuentas, ni recopilamos nombres, correos electrónicos o direcciones IP de manera sistemática para permitir la publicación. Al ser un servicio de publicación anónima que no solicita datos personales para operar, la plataforma se exime de las obligaciones de tratamiento establecidas en la Ley Federal de Protección de Datos Personales en Posesión de los Particulares, ya que no recaba datos identificables.</p>
+
+                <h3 className="text-xl font-bold text-gray-900 mt-8 mb-3">5. Facultad de Moderación</h3>
+                <p>Aunque la plataforma respeta la libertad de expresión, los administradores se reservan el derecho irrestricto de remover, eliminar u ocultar, sin necesidad de previo aviso al autor original, cualquier publicación o comentario que sea reportado por mandato judicial o que, a juicio único de la administración, vulnere la integridad de la plataforma o de terceros.</p>
+
+                <h3 className="text-xl font-bold text-gray-900 mt-8 mb-3">6. Liberación de Daños y Perjuicios</h3>
+                <p>Al utilizar este portal, el usuario libera de forma absoluta y permanente a los creadores, desarrolladores y administradores de la plataforma de toda reclamación, demanda, litigio o indemnización por supuestos daños (incluyendo daño moral) o perjuicios derivados de la información ("User-Generated Content") aquí albergada.</p>
+
+                <h3 className="text-xl font-bold text-gray-900 mt-8 mb-3">7. Modificaciones a los Términos y Condiciones</h3>
+                <p>Nos reservamos el derecho exclusivo de modificar, actualizar, añadir o eliminar porciones de estos Términos y Condiciones en cualquier momento y sin previo aviso. Es responsabilidad del usuario revisar periódicamente esta sección. El acceso o uso continuo de la plataforma después de la publicación de dichos cambios constituye la aceptación vinculante a las modificaciones realizadas.</p>
               </div>
-            )}
-          </div>
-        )}
 
-        {/* --- PANTALLA TÉRMINOS Y CONDICIONES --- */}
-        {view === 'terms' && (
-          <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-500 p-8 md:p-12 mb-12">
-            <button onClick={() => setView('home')} className="mb-8 flex items-center gap-2 text-gray-500 hover:text-blue-900 transition-colors font-bold">
-              <ArrowLeft size={20} /> Volver al inicio
-            </button>
-
-            <h1 className={`text-3xl md:text-4xl font-black mb-8 ${ntrText} border-b pb-4`}>Términos y Condiciones de Uso y Aviso Legal</h1>
-
-            <div className="prose prose-lg text-gray-700 max-w-none space-y-6">
-              <p>Bienvenido al portal de <strong>Avisos Ciudadanos</strong>. Al acceder, navegar y utilizar esta plataforma, aceptas estar sujeto a las siguientes disposiciones legales. Si no estás de acuerdo con ellas, te invitamos a abandonar el sitio.</p>
-
-              <h3 className="text-xl font-bold text-gray-900 mt-8 mb-3">1. Naturaleza de la Plataforma</h3>
-              <p>Esta plataforma es un medio tecnológico diseñado para facilitar el ejercicio del derecho a la libre manifestación de ideas y la libertad de difusión, consagrados en los <a href="https://www.diputados.gob.mx/LeyesBiblio/pdf/CPEUM.pdf" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline font-medium">Artículos 6º y 7º de la Constitución Política de los Estados Unidos Mexicanos</a>. Funciona exclusivamente como un tablero de avisos de acceso público y gratuito.</p>
-
-              <h3 className="text-xl font-bold text-gray-900 mt-8 mb-3">2. Intermediación Tecnológica y Ausencia de Responsabilidad Editorial</h3>
-              <p>La plataforma (así como sus creadores y administradores) actúa única y exclusivamente como un intermediario tecnológico (prestador de servicios de alojamiento de datos). <strong>No ejercemos control previo, no editamos, no aprobamos ni hacemos nuestro el contenido publicado por los usuarios</strong>. Toda noticia, aviso, denuncia o comentario refleja únicamente la opinión y responsabilidad inalienable de su autor.</p>
-
-              <h3 className="text-xl font-bold text-gray-900 mt-8 mb-3">3. Responsabilidad Exclusiva del Usuario</h3>
-              <p className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-900 font-medium">
-                Con fundamento en el derecho aplicable, la responsabilidad legal, civil, penal o moral derivada de cualquier texto, imagen o comentario publicado recae de manera absoluta y exclusiva en la persona que lo emite. Quien lee y utiliza la información lo hace bajo su propio riesgo y criterio.
-              </p>
-
-              <h3 className="text-xl font-bold text-gray-900 mt-8 mb-3">4. Publicación Anónima y Protección de Datos</h3>
-              <p>En estricto apego y respeto a la privacidad de los denunciantes, el sistema permite la publicación de contenido de manera completamente anónima. No requerimos la creación de cuentas, ni recopilamos nombres, correos electrónicos o direcciones IP de manera sistemática para permitir la publicación. Al ser un servicio de publicación anónima que no solicita datos personales para operar, la plataforma se exime de las obligaciones de tratamiento establecidas en la Ley Federal de Protección de Datos Personales en Posesión de los Particulares, ya que no recaba datos identificables.</p>
-
-              <h3 className="text-xl font-bold text-gray-900 mt-8 mb-3">5. Facultad de Moderación</h3>
-              <p>Aunque la plataforma respeta la libertad de expresión, los administradores se reservan el derecho irrestricto de remover, eliminar u ocultar, sin necesidad de previo aviso al autor original, cualquier publicación o comentario que sea reportado por mandato judicial o que, a juicio único de la administración, vulnere la integridad de la plataforma o de terceros.</p>
-
-              <h3 className="text-xl font-bold text-gray-900 mt-8 mb-3">6. Liberación de Daños y Perjuicios</h3>
-              <p>Al utilizar este portal, el usuario libera de forma absoluta y permanente a los creadores, desarrolladores y administradores de la plataforma de toda reclamación, demanda, litigio o indemnización por supuestos daños (incluyendo daño moral) o perjuicios derivados de la información ("User-Generated Content") aquí albergada.</p>
-
-              <h3 className="text-xl font-bold text-gray-900 mt-8 mb-3">7. Modificaciones a los Términos y Condiciones</h3>
-              <p>Nos reservamos el derecho exclusivo de modificar, actualizar, añadir o eliminar porciones de estos Términos y Condiciones en cualquier momento y sin previo aviso. Es responsabilidad del usuario revisar periódicamente esta sección. El acceso o uso continuo de la plataforma después de la publicación de dichos cambios constituye la aceptación vinculante a las modificaciones realizadas.</p>
+              <div className="mt-12 pt-8 border-t text-center">
+                <Link to="/" className={`${ntrBlue} text-white px-8 py-3 rounded-full font-bold shadow-lg hover:shadow-xl hover:scale-105 transition-all inline-block`}>
+                  Volver al inicio
+                </Link>
+              </div>
             </div>
+          } />
 
-            <div className="mt-12 pt-8 border-t text-center">
-              <button onClick={() => setView('home')} className={`${ntrBlue} text-white px-8 py-3 rounded-full font-bold shadow-lg hover:shadow-xl hover:scale-105 transition-all`}>
-                Volver al inicio
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* --- PANTALLA DE REDACCIÓN --- */}
-        {view === 'create' && (
-          <div className="max-w-3xl mx-auto animate-in slide-in-from-bottom-4 duration-500">
-            <div className="bg-white rounded-xl shadow-xl p-8 border border-gray-100">
-              <h2 className={`text-2xl font-bold flex items-center mb-6 ${ntrText}`}>{editingId ? <Edit size={28} className="mr-3" /> : <PlusCircle size={28} className="mr-3" />} Panel de Redacción</h2>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="col-span-1 md:col-span-2"><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Titular</label><input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full p-4 bg-gray-50 border border-gray-200 rounded-lg font-bold text-lg outline-none focus:ring-2 focus:ring-blue-800" required /></div>
-                  <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Autor</label><input type="text" value={author} onChange={(e) => setAuthor(e.target.value)} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg outline-none" /></div>
-                  <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Sección</label><select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg outline-none"><option>General</option><option>Tecnología</option><option>Deportes</option><option>Arte</option><option>Política</option><option>Seguridad</option><option>Municipios</option></select></div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-3">Imagen de Portada</label>
-                  <div className="p-4 border-2 border-dashed rounded-xl bg-gray-50">
-                    {!image ? (
-                      <div className="space-y-4">
-                        <div className="flex justify-center">
-                          <label className="cursor-pointer flex flex-col items-center gap-2 text-gray-500">
-                            {isCompressing ? <Loader2 className="animate-spin text-blue-900" /> : <React.Fragment><Upload size={32} /><span className="font-medium text-gray-500">Subir Portada</span></React.Fragment>}
-                            <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-                          </label>
-                        </div>
-                        <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
-                          {presetImages.map((preset, pidx) => (
-                            <button type="button" key={`p-${pidx}`} onClick={() => setImage(getRandomImageUrl(preset.keyword))} className="text-xs p-2 rounded-lg border bg-white flex flex-col items-center justify-center text-center gap-2 hover:border-blue-900 hover:bg-blue-50 transition-colors">
-                              {preset.icon} {preset.name}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="relative h-64 w-full rounded-lg overflow-hidden group shadow-lg">
-                        <img src={image} alt="Preview" className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <button type="button" onClick={() => setImage('')} className="bg-white text-red-600 px-4 py-2 rounded-full font-bold shadow-lg transform hover:scale-105 transition-transform flex items-center gap-2">
-                            <Trash2 size={16} /> Cambiar imagen
-                          </button>
-                        </div>
-                      </div>
-                    )}
+          {/* --- PANTALLA DE REDACCIÓN --- */}
+          <Route path="/redaccion" element={
+            <div className="max-w-3xl mx-auto animate-in slide-in-from-bottom-4 duration-500">
+              <div className="bg-white rounded-xl shadow-xl p-8 border border-gray-100">
+                <h2 className={`text-2xl font-bold flex items-center mb-6 ${ntrText}`}>{editingId ? <Edit size={28} className="mr-3" /> : <PlusCircle size={28} className="mr-3" />} Panel de Redacción</h2>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="col-span-1 md:col-span-2"><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Titular</label><input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full p-4 bg-gray-50 border border-gray-200 rounded-lg font-bold text-lg outline-none focus:ring-2 focus:ring-blue-800" required /></div>
+                    <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Autor</label><input type="text" value={author} onChange={(e) => setAuthor(e.target.value)} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg outline-none" /></div>
+                    <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Sección</label><select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg outline-none"><option>General</option><option>Tecnología</option><option>Deportes</option><option>Arte</option><option>Política</option><option>Seguridad</option><option>Municipios</option></select></div>
                   </div>
-                </div>
 
-                <div className="space-y-4">
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Cuerpo de la noticia</label>
-                  {contentBlocks.map((block, index) => (
-                    <div key={block.id} className="relative group">
-                      {block.type === 'text' ? (
-                        <div className="relative">
-                          <AlignLeft className="absolute top-3 left-3 text-gray-400" size={16} />
-                          <textarea
-                            value={block.value}
-                            onChange={(e) => updateBlockValue(block.id, e.target.value)}
-                            rows="5"
-                            className="w-full p-3 pl-10 pr-12 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:bg-white transition-all leading-relaxed"
-                            placeholder={`Escribe aquí tu idea para la sección ${category}...`}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => handleAiRewriteBlock(block.id, block.value)}
-                            disabled={activeAiBlockId === block.id}
-                            className={`absolute bottom-3 right-3 p-2 rounded-full shadow-md transition-all ${activeAiBlockId === block.id ? 'bg-gray-100 text-gray-400' : 'bg-gradient-to-br from-indigo-600 to-blue-600 text-white hover:scale-110 active:scale-95'}`}
-                          >
-                            {activeAiBlockId === block.id ? <Loader2 className="animate-spin" size={16} /> : <Sparkles size={16} />}
-                          </button>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-3">Imagen de Portada</label>
+                    <div className="p-4 border-2 border-dashed rounded-xl bg-gray-50">
+                      {!image ? (
+                        <div className="space-y-4">
+                          <div className="flex justify-center">
+                            <label className="cursor-pointer flex flex-col items-center gap-2 text-gray-500">
+                              {isCompressing ? <Loader2 className="animate-spin text-blue-900" /> : <React.Fragment><Upload size={32} /><span className="font-medium text-gray-500">Subir Portada</span></React.Fragment>}
+                              <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                            </label>
+                          </div>
+                          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
+                            {presetImages.map((preset, pidx) => (
+                              <button type="button" key={`p-${pidx}`} onClick={() => setImage(getRandomImageUrl(preset.keyword))} className="text-xs p-2 rounded-lg border bg-white flex flex-col items-center justify-center text-center gap-2 hover:border-blue-900 hover:bg-blue-50 transition-colors">
+                                {preset.icon} {preset.name}
+                              </button>
+                            ))}
+                          </div>
                         </div>
                       ) : (
-                        <div className="relative border-2 border-dashed p-4 bg-gray-50 text-center rounded-lg">
-                          {block.value ? (
-                            <div className="relative inline-block w-full">
-                              <img src={block.value} alt="Contenido" className="max-h-64 mx-auto rounded shadow-sm" />
-                              <button type="button" onClick={() => updateBlockValue(block.id, '')} className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full shadow-md hover:bg-red-600 transition-colors"><X size={14} /></button>
-                            </div>
-                          ) : (
-                            <div className="py-8 cursor-pointer text-gray-400 hover:text-gray-600 transition-colors" onClick={() => contentFileInputRefs.current[block.id].click()}>
-                              <ImageIcon size={32} className="mx-auto mb-2" />
-                              <span className="text-sm font-medium">Subir foto para este bloque</span>
-                            </div>
-                          )}
-                          <input type="file" className="hidden" accept="image/*" ref={el => contentFileInputRefs.current[block.id] = el} onChange={(e) => handleBlockImageUpload(e, block.id)} />
+                        <div className="relative h-64 w-full rounded-lg overflow-hidden group shadow-lg">
+                          <img src={image} alt="Preview" className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <button type="button" onClick={() => setImage('')} className="bg-white text-red-600 px-4 py-2 rounded-full font-bold shadow-lg transform hover:scale-105 transition-transform flex items-center gap-2">
+                              <Trash2 size={16} /> Cambiar imagen
+                            </button>
+                          </div>
                         </div>
                       )}
-                      <div className="absolute -right-10 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-1">
-                        <button type="button" onClick={() => moveBlockUp(index)} disabled={index === 0} className="p-1.5 bg-white border rounded shadow hover:bg-gray-50"><ArrowUp size={14} /></button>
-                        <button type="button" onClick={() => moveBlockDown(index)} disabled={index === contentBlocks.length - 1} className="p-1.5 bg-white border rounded shadow hover:bg-gray-50"><ArrowDown size={14} /></button>
-                        <button type="button" onClick={() => removeBlock(block.id)} className="p-1.5 bg-white border text-red-400 rounded shadow hover:bg-red-50"><Trash2 size={14} /></button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Cuerpo de la noticia</label>
+                    {contentBlocks.map((block, index) => (
+                      <div key={block.id} className="relative group">
+                        {block.type === 'text' ? (
+                          <div className="relative">
+                            <AlignLeft className="absolute top-3 left-3 text-gray-400" size={16} />
+                            <textarea
+                              value={block.value}
+                              onChange={(e) => updateBlockValue(block.id, e.target.value)}
+                              rows="5"
+                              className="w-full p-3 pl-10 pr-12 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:bg-white transition-all leading-relaxed"
+                              placeholder={`Escribe aquí tu idea para la sección ${category}...`}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleAiRewriteBlock(block.id, block.value)}
+                              disabled={activeAiBlockId === block.id}
+                              className={`absolute bottom-3 right-3 p-2 rounded-full shadow-md transition-all ${activeAiBlockId === block.id ? 'bg-gray-100 text-gray-400' : 'bg-gradient-to-br from-indigo-600 to-blue-600 text-white hover:scale-110 active:scale-95'}`}
+                            >
+                              {activeAiBlockId === block.id ? <Loader2 className="animate-spin" size={16} /> : <Sparkles size={16} />}
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="relative border-2 border-dashed p-4 bg-gray-50 text-center rounded-lg">
+                            {block.value ? (
+                              <div className="relative inline-block w-full">
+                                <img src={block.value} alt="Contenido" className="max-h-64 mx-auto rounded shadow-sm" />
+                                <button type="button" onClick={() => updateBlockValue(block.id, '')} className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full shadow-md hover:bg-red-600 transition-colors"><X size={14} /></button>
+                              </div>
+                            ) : (
+                              <div className="py-8 cursor-pointer text-gray-400 hover:text-gray-600 transition-colors" onClick={() => contentFileInputRefs.current[block.id].click()}>
+                                <ImageIcon size={32} className="mx-auto mb-2" />
+                                <span className="text-sm font-medium">Subir foto para este bloque</span>
+                              </div>
+                            )}
+                            <input type="file" className="hidden" accept="image/*" ref={el => contentFileInputRefs.current[block.id] = el} onChange={(e) => handleBlockImageUpload(e, block.id)} />
+                          </div>
+                        )}
+                        <div className="absolute -right-10 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-1">
+                          <button type="button" onClick={() => moveBlockUp(index)} disabled={index === 0} className="p-1.5 bg-white border rounded shadow hover:bg-gray-50"><ArrowUp size={14} /></button>
+                          <button type="button" onClick={() => moveBlockDown(index)} disabled={index === contentBlocks.length - 1} className="p-1.5 bg-white border rounded shadow hover:bg-gray-50"><ArrowDown size={14} /></button>
+                          <button type="button" onClick={() => removeBlock(block.id)} className="p-1.5 bg-white border text-red-400 rounded shadow hover:bg-red-50"><Trash2 size={14} /></button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-3 justify-center pt-2 border-t border-gray-100 border-dashed">
+                    <button type="button" onClick={addTextBlock} className="flex items-center gap-2 px-4 py-2 rounded-full border border-gray-200 hover:text-blue-900 font-bold text-sm shadow-sm transition-all text-gray-500 hover:bg-gray-50">
+                      <Type size={16} /> Agregar Párrafo
+                    </button>
+                    <button type="button" onClick={addImageBlock} className="flex items-center gap-2 px-4 py-2 rounded-full border border-gray-200 hover:text-blue-900 font-bold text-sm shadow-sm transition-all text-gray-500 hover:bg-gray-50">
+                      <ImageIcon size={16} /> Agregar Foto
+                    </button>
+                  </div>
+
+                  <div className="pt-4 flex gap-4">
+                    <button type="button" onClick={() => { resetForm(); navigate('/'); }} className="px-6 py-3 rounded-lg font-bold text-gray-500 hover:bg-gray-100 transition-colors" disabled={isSubmitting}>
+                      Cancelar
+                    </button>
+                    <button type="submit" disabled={isSubmitting || !currentUser} className={`flex-1 ${ntrBlue} text-white px-6 py-3 rounded-lg font-bold shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all flex justify-center items-center gap-2 ${isSubmitting ? 'opacity-70' : ''}`}>
+                      {isSubmitting ? "Guardando..." : <><Send size={18} /> <span>{editingId ? "Actualizar Noticia" : "Publicar Noticia"}</span></>}
+                    </button>
+                  </div>
+                </form>
+
+                {!isAdmin && (
+                  <div className="mt-10 pt-8 border-t flex flex-col items-center text-center pb-8">
+                    <h3 className="text-lg font-bold text-gray-800 mb-2">Mis Publicaciones</h3>
+                    <p className="text-gray-500 text-sm mb-4 max-w-md">Si necesitas hacer una corrección o eliminar una nota que publicaste tú mismo, activa el modo de edición.</p>
+                    <button onClick={() => { setIsEditMode(!isEditMode); navigate('/'); }} className="flex items-center gap-2 px-6 py-3 rounded-full border-2 border-blue-900 text-blue-900 font-bold hover:bg-blue-50 transition-all transform hover:scale-105 shadow-sm">
+                      {isEditMode ? <><X size={18} /> Salir de edición</> : <><Edit size={18} /> Editar mis notas</>}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          } />
+
+          {/* --- PANTALLA DE ARTÍCULO --- */}
+          <Route path="/noticia/:id" element={
+            <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-right-8 duration-500">
+              <button onClick={() => navigate(-1)} className="m-6 flex items-center gap-2 text-gray-500 hover:text-blue-900 transition-colors font-bold"><ArrowLeft size={20} /> Volver</button>
+              {selectedArticle ? (
+                <article>
+                  <div className="h-64 md:h-96 relative group">
+                    <img src={selectedArticle.image} alt={selectedArticle.title} className="w-full h-full object-cover" />
+                    <button onClick={() => setFullScreenImage(selectedArticle.image)} className="absolute top-4 right-4 md:top-6 md:right-6 bg-black/50 text-white p-2 md:p-3 rounded-full backdrop-blur-sm shadow-lg flex items-center gap-2 z-10 font-bold text-sm hover:bg-black/70 transition-all opacity-80 hover:opacity-100">
+                      <Maximize2 size={20} /> <span className="hidden sm:inline">Ver foto completa</span>
+                    </button>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
+                    <div className="absolute bottom-0 left-0 p-4 md:p-8 w-full pointer-events-none">
+                      <span className="bg-blue-600 text-white px-2 py-1 md:px-3 md:py-1 rounded-full text-xs md:text-sm font-bold mb-2 md:mb-4 inline-block shadow-sm">
+                        {selectedArticle.category}
+                      </span>
+                      <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white leading-tight md:leading-tight mb-2 drop-shadow-lg">
+                        {selectedArticle.title}
+                      </h1>
+                      <div className="flex flex-wrap items-center text-gray-200 text-xs md:text-sm gap-2 sm:gap-4 opacity-90">
+                        <span className="flex items-center gap-1.5"><User size={14} className="md:w-4 md:h-4" /> {selectedArticle.author || "Redacción NTR"}</span>
+                        <span className="flex items-center gap-1.5"><Calendar size={14} className="md:w-4 md:h-4" /> {selectedArticle.date}</span>
                       </div>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                  <div className="p-8 md:p-12">
+                    {(isAdmin || isEditMode) && canManageArticle(selectedArticle) && (
+                      <div className="mb-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex gap-4 items-center justify-between">
+                        <span className="text-yellow-800 font-bold flex items-center gap-2">{isAdmin ? <><Lock size={16} /> Admin</> : <><Edit size={16} /> Tu Nota</>}</span>
+                        <div className="flex gap-2">
+                          <button onClick={(e) => handleEdit(e, selectedArticle)} className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg font-bold hover:bg-blue-200 transition-colors">Editar</button>
+                          <button onClick={(e) => handleDelete(e, selectedArticle)} className="px-4 py-2 bg-red-100 text-red-700 rounded-lg font-bold hover:bg-red-200 transition-colors">Borrar</button>
+                        </div>
+                      </div>
+                    )}
+                    <div className="prose prose-lg max-w-none text-gray-700 leading-relaxed mb-12">{renderArticleContent(selectedArticle.content)}</div>
 
-                <div className="flex gap-3 justify-center pt-2 border-t border-gray-100 border-dashed">
-                  <button type="button" onClick={addTextBlock} className="flex items-center gap-2 px-4 py-2 rounded-full border border-gray-200 hover:text-blue-900 font-bold text-sm shadow-sm transition-all text-gray-500 hover:bg-gray-50">
-                    <Type size={16} /> Agregar Párrafo
-                  </button>
-                  <button type="button" onClick={addImageBlock} className="flex items-center gap-2 px-4 py-2 rounded-full border border-gray-200 hover:text-blue-900 font-bold text-sm shadow-sm transition-all text-gray-500 hover:bg-gray-50">
-                    <ImageIcon size={16} /> Agregar Foto
-                  </button>
-                </div>
+                    {/* --- SECCIÓN DE COMENTARIOS --- */}
+                    <div className="border-t border-gray-200 pt-10">
+                      <h3 className={`text-2xl font-bold ${ntrText} mb-8 flex items-center gap-2`}>
+                        <MessageSquare /> Comentarios ({selectedArticle.comments?.length || 0})
+                      </h3>
 
-                <div className="pt-4 flex gap-4">
-                  <button type="button" onClick={() => { resetForm(); setView('home'); }} className="px-6 py-3 rounded-lg font-bold text-gray-500 hover:bg-gray-100 transition-colors" disabled={isSubmitting}>
-                    Cancelar
-                  </button>
-                  <button type="submit" disabled={isSubmitting || !currentUser} className={`flex-1 ${ntrBlue} text-white px-6 py-3 rounded-lg font-bold shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all flex justify-center items-center gap-2 ${isSubmitting ? 'opacity-70' : ''}`}>
-                    {isSubmitting ? "Guardando..." : <><Send size={18} /> <span>{editingId ? "Actualizar Noticia" : "Publicar Noticia"}</span></>}
-                  </button>
-                </div>
-              </form>
+                      <div className="space-y-6 mb-10">
+                        {selectedArticle.comments?.length > 0 ? (
+                          selectedArticle.comments.map((comment, idx) => {
+                            if (editingCommentId === comment.id) {
+                              return (
+                                <div key={idx} className="bg-white p-6 rounded-xl border-2 border-blue-200 relative shadow-sm">
+                                  <h5 className="font-bold text-sm mb-3 text-blue-900 flex items-center gap-2"><Edit size={14} /> Editando comentario</h5>
+                                  <input type="text" value={editCommentAuthor} onChange={(e) => setEditCommentAuthor(e.target.value)} className="w-full p-2 mb-2 border border-gray-300 rounded-lg outline-none focus:border-blue-500" placeholder="Nombre del autor" />
+                                  <textarea value={editCommentText} onChange={(e) => setEditCommentText(e.target.value)} className="w-full p-2 mb-2 border border-gray-300 rounded-lg min-h-[80px] outline-none focus:border-blue-500 resize-y" placeholder="Comentario" />
 
-              {!isAdmin && (
-                <div className="mt-10 pt-8 border-t flex flex-col items-center text-center pb-8">
-                  <h3 className="text-lg font-bold text-gray-800 mb-2">Mis Publicaciones</h3>
-                  <p className="text-gray-500 text-sm mb-4 max-w-md">Si necesitas hacer una corrección o eliminar una nota que publicaste tú mismo, activa el modo de edición.</p>
-                  <button onClick={() => { setIsEditMode(!isEditMode); setView('home'); }} className="flex items-center gap-2 px-6 py-3 rounded-full border-2 border-blue-900 text-blue-900 font-bold hover:bg-blue-50 transition-all transform hover:scale-105 shadow-sm">
-                    {isEditMode ? <><X size={18} /> Salir de edición</> : <><Edit size={18} /> Editar mis notas</>}
-                  </button>
+                                  <div className="flex gap-2 items-center mb-4">
+                                    {editCommentImage && (
+                                      <div className="relative inline-block">
+                                        <img src={editCommentImage} className="h-16 w-auto rounded border border-gray-200 object-cover" alt="edit" />
+                                        <button onClick={() => setEditCommentImage('')} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"><X size={10} /></button>
+                                      </div>
+                                    )}
+                                    <button onClick={() => editCommentFileInputRef.current.click()} className="text-gray-600 hover:text-blue-800 bg-gray-100 hover:bg-gray-200 p-2 rounded-lg text-sm flex items-center gap-2 transition-colors">
+                                      <ImageIcon size={16} /> {editCommentImage ? "Cambiar foto" : "Añadir foto"}
+                                    </button>
+                                    <input type="file" ref={editCommentFileInputRef} className="hidden" accept="image/*" onChange={handleEditCommentImageUpload} />
+                                  </div>
+
+                                  <div className="flex gap-3">
+                                    <button onClick={saveEditedComment} className="bg-blue-800 hover:bg-blue-900 text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors">Guardar</button>
+                                    <button onClick={() => setEditingCommentId(null)} className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-bold transition-colors">Cancelar</button>
+                                  </div>
+                                </div>
+                              );
+                            }
+
+                            return (
+                              <div key={idx} className="bg-gray-50 p-6 rounded-xl border border-gray-100 relative group">
+                                <div className="flex justify-between items-start mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-900 font-bold text-xs">
+                                      {comment.author?.charAt(0).toUpperCase() || 'A'}
+                                    </div>
+                                    <span className="font-bold text-gray-900">{comment.author}</span>
+                                  </div>
+                                  <span className="text-xs text-gray-400">{comment.date}</span>
+                                </div>
+                                <p className="text-gray-700 whitespace-pre-wrap">{comment.text}</p>
+                                {comment.image && (
+                                  <div className="mt-3 rounded-lg overflow-hidden border border-gray-200 max-w-sm relative group/img">
+                                    <img src={comment.image} alt="Adjunto del comentario" className="w-full h-auto object-cover" />
+                                    <button
+                                      onClick={() => setFullScreenImage(comment.image)}
+                                      className="absolute bottom-2 right-2 bg-black/50 hover:bg-black/70 text-white p-1.5 rounded-full backdrop-blur-sm opacity-0 group-hover/img:opacity-100 transition-all shadow-md"
+                                      title="Ver en grande"
+                                    >
+                                      <Maximize2 size={16} />
+                                    </button>
+                                  </div>
+                                )}
+                                {isAdmin && (
+                                  <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button
+                                      onClick={() => startEditingComment(comment)}
+                                      className="text-blue-400 hover:text-blue-600 bg-white shadow-sm border border-blue-100 transition-colors p-1.5 rounded"
+                                      title="Editar Comentario"
+                                    >
+                                      <Edit size={14} />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteComment(comment)}
+                                      className="text-red-400 hover:text-red-600 bg-white shadow-sm border border-red-100 transition-colors p-1.5 rounded"
+                                      title="Borrar Comentario"
+                                    >
+                                      <Trash2 size={14} />
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <p className="text-gray-400 italic">No hay opiniones todavía.</p>
+                        )}
+                      </div>
+
+                      <form onSubmit={handleAddComment} className="bg-blue-50 p-6 rounded-xl border border-blue-100 relative">
+                        <h4 className="font-bold text-gray-800 mb-4">Deja tu opinión</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                          <input type="text" placeholder="Tu nombre" value={commentName} onChange={(e) => setCommentName(e.target.value)} className="p-3 rounded-lg border border-gray-200 focus:border-blue-500 outline-none w-full" />
+                          <div className="md:col-span-2 relative">
+                            <div className="relative">
+                              <textarea
+                                placeholder="Escribe tu comentario..."
+                                value={commentText}
+                                onChange={(e) => setCommentText(e.target.value)}
+                                className="p-3 rounded-lg border border-gray-200 focus:border-blue-500 outline-none w-full min-h-[80px] pr-12 resize-y"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => commentFileInputRef.current.click()}
+                                className="absolute bottom-3 right-3 text-gray-400 hover:text-blue-600 transition-colors p-1"
+                                title="Adjuntar foto"
+                              >
+                                <ImageIcon size={20} />
+                              </button>
+                              <input
+                                type="file"
+                                ref={commentFileInputRef}
+                                className="hidden"
+                                accept="image/*"
+                                onChange={handleCommentImageUpload}
+                              />
+                            </div>
+                            {isCompressingComment && <div className="mt-2 text-xs text-blue-600 flex items-center gap-1">Procesando imagen...</div>}
+                            {commentImage && (
+                              <div className="mt-2 relative inline-block">
+                                <img src={commentImage} alt="Preview" className="h-20 w-auto rounded border border-blue-200 object-cover" />
+                                <button type="button" onClick={() => setCommentImage('')} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 shadow-sm hover:bg-red-600"><X size={12} /></button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <button type="submit" disabled={isCompressingComment} className={`${ntrBlue} text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-800 transition-colors disabled:opacity-50`}>Enviar Comentario</button>
+                      </form>
+                    </div>
+                  </div>
+                </article>
+              ) : (
+                <div className="p-12 text-center text-gray-500">
+                  <Loader2 className="animate-spin mx-auto mb-4" size={32} />
+                  <p>Cargando noticia...</p>
                 </div>
               )}
             </div>
-          </div>
-        )}
-
-        {/* --- PANTALLA DE ARTÍCULO --- */}
-        {view === 'article' && selectedArticle && (
-          <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-right-8 duration-500">
-            <button onClick={() => setView('home')} className="m-6 flex items-center gap-2 text-gray-500 hover:text-blue-900 transition-colors font-bold"><ArrowLeft size={20} /> Volver al inicio</button>
-            <article>
-              <div className="h-64 md:h-96 relative group">
-                <img src={selectedArticle.image} alt={selectedArticle.title} className="w-full h-full object-cover" />
-                <button onClick={() => setFullScreenImage(selectedArticle.image)} className="absolute top-4 right-4 md:top-6 md:right-6 bg-black/50 text-white p-2 md:p-3 rounded-full backdrop-blur-sm shadow-lg flex items-center gap-2 z-10 font-bold text-sm hover:bg-black/70 transition-all opacity-80 hover:opacity-100">
-                  <Maximize2 size={20} /> <span className="hidden sm:inline">Ver foto completa</span>
-                </button>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
-                <div className="absolute bottom-0 left-0 p-4 md:p-8 w-full pointer-events-none">
-                  <span className="bg-blue-600 text-white px-2 py-1 md:px-3 md:py-1 rounded-full text-xs md:text-sm font-bold mb-2 md:mb-4 inline-block shadow-sm">
-                    {selectedArticle.category}
-                  </span>
-                  <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white leading-tight md:leading-tight mb-2 drop-shadow-lg">
-                    {selectedArticle.title}
-                  </h1>
-                  <div className="flex flex-wrap items-center text-gray-200 text-xs md:text-sm gap-2 sm:gap-4 opacity-90">
-                    <span className="flex items-center gap-1.5"><User size={14} className="md:w-4 md:h-4" /> {selectedArticle.author || "Redacción NTR"}</span>
-                    <span className="flex items-center gap-1.5"><Calendar size={14} className="md:w-4 md:h-4" /> {selectedArticle.date}</span>
-                  </div>
-                </div>
-              </div>
-              <div className="p-8 md:p-12">
-                {(isAdmin || isEditMode) && canManageArticle(selectedArticle) && (
-                  <div className="mb-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex gap-4 items-center justify-between">
-                    <span className="text-yellow-800 font-bold flex items-center gap-2">{isAdmin ? <><Lock size={16} /> Admin</> : <><Edit size={16} /> Tu Nota</>}</span>
-                    <div className="flex gap-2">
-                      <button onClick={(e) => handleEdit(e, selectedArticle)} className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg font-bold hover:bg-blue-200 transition-colors">Editar</button>
-                      <button onClick={(e) => handleDelete(e, selectedArticle)} className="px-4 py-2 bg-red-100 text-red-700 rounded-lg font-bold hover:bg-red-200 transition-colors">Borrar</button>
-                    </div>
-                  </div>
-                )}
-                <div className="prose prose-lg max-w-none text-gray-700 leading-relaxed mb-12">{renderArticleContent(selectedArticle.content)}</div>
-
-                {/* --- SECCIÓN DE COMENTARIOS --- */}
-                <div className="border-t border-gray-200 pt-10">
-                  <h3 className={`text-2xl font-bold ${ntrText} mb-8 flex items-center gap-2`}>
-                    <MessageSquare /> Comentarios ({selectedArticle.comments?.length || 0})
-                  </h3>
-
-                  <div className="space-y-6 mb-10">
-                    {selectedArticle.comments?.length > 0 ? (
-                      selectedArticle.comments.map((comment, idx) => {
-                        if (editingCommentId === comment.id) {
-                          return (
-                            <div key={idx} className="bg-white p-6 rounded-xl border-2 border-blue-200 relative shadow-sm">
-                              <h5 className="font-bold text-sm mb-3 text-blue-900 flex items-center gap-2"><Edit size={14} /> Editando comentario</h5>
-                              <input type="text" value={editCommentAuthor} onChange={(e) => setEditCommentAuthor(e.target.value)} className="w-full p-2 mb-2 border border-gray-300 rounded-lg outline-none focus:border-blue-500" placeholder="Nombre del autor" />
-                              <textarea value={editCommentText} onChange={(e) => setEditCommentText(e.target.value)} className="w-full p-2 mb-2 border border-gray-300 rounded-lg min-h-[80px] outline-none focus:border-blue-500 resize-y" placeholder="Comentario" />
-
-                              <div className="flex gap-2 items-center mb-4">
-                                {editCommentImage && (
-                                  <div className="relative inline-block">
-                                    <img src={editCommentImage} className="h-16 w-auto rounded border border-gray-200 object-cover" alt="edit" />
-                                    <button onClick={() => setEditCommentImage('')} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"><X size={10} /></button>
-                                  </div>
-                                )}
-                                <button onClick={() => editCommentFileInputRef.current.click()} className="text-gray-600 hover:text-blue-800 bg-gray-100 hover:bg-gray-200 p-2 rounded-lg text-sm flex items-center gap-2 transition-colors">
-                                  <ImageIcon size={16} /> {editCommentImage ? "Cambiar foto" : "Añadir foto"}
-                                </button>
-                                <input type="file" ref={editCommentFileInputRef} className="hidden" accept="image/*" onChange={handleEditCommentImageUpload} />
-                              </div>
-
-                              <div className="flex gap-3">
-                                <button onClick={saveEditedComment} className="bg-blue-800 hover:bg-blue-900 text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors">Guardar</button>
-                                <button onClick={() => setEditingCommentId(null)} className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-bold transition-colors">Cancelar</button>
-                              </div>
-                            </div>
-                          );
-                        }
-
-                        return (
-                          <div key={idx} className="bg-gray-50 p-6 rounded-xl border border-gray-100 relative group">
-                            <div className="flex justify-between items-start mb-2">
-                              <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-900 font-bold text-xs">
-                                  {comment.author?.charAt(0).toUpperCase() || 'A'}
-                                </div>
-                                <span className="font-bold text-gray-900">{comment.author}</span>
-                              </div>
-                              <span className="text-xs text-gray-400">{comment.date}</span>
-                            </div>
-                            <p className="text-gray-700 whitespace-pre-wrap">{comment.text}</p>
-                            {comment.image && (
-                              <div className="mt-3 rounded-lg overflow-hidden border border-gray-200 max-w-sm relative group/img">
-                                <img src={comment.image} alt="Adjunto del comentario" className="w-full h-auto object-cover" />
-                                <button
-                                  onClick={() => setFullScreenImage(comment.image)}
-                                  className="absolute bottom-2 right-2 bg-black/50 hover:bg-black/70 text-white p-1.5 rounded-full backdrop-blur-sm opacity-0 group-hover/img:opacity-100 transition-all shadow-md"
-                                  title="Ver en grande"
-                                >
-                                  <Maximize2 size={16} />
-                                </button>
-                              </div>
-                            )}
-                            {isAdmin && (
-                              <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button
-                                  onClick={() => startEditingComment(comment)}
-                                  className="text-blue-400 hover:text-blue-600 bg-white shadow-sm border border-blue-100 transition-colors p-1.5 rounded"
-                                  title="Editar Comentario"
-                                >
-                                  <Edit size={14} />
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteComment(comment)}
-                                  className="text-red-400 hover:text-red-600 bg-white shadow-sm border border-red-100 transition-colors p-1.5 rounded"
-                                  title="Borrar Comentario"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })
-                    ) : (
-                      <p className="text-gray-400 italic">No hay opiniones todavía.</p>
-                    )}
-                  </div>
-
-                  <form onSubmit={handleAddComment} className="bg-blue-50 p-6 rounded-xl border border-blue-100 relative">
-                    <h4 className="font-bold text-gray-800 mb-4">Deja tu opinión</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                      <input type="text" placeholder="Tu nombre" value={commentName} onChange={(e) => setCommentName(e.target.value)} className="p-3 rounded-lg border border-gray-200 focus:border-blue-500 outline-none w-full" />
-                      <div className="md:col-span-2 relative">
-                        <div className="relative">
-                          <textarea
-                            placeholder="Escribe tu comentario..."
-                            value={commentText}
-                            onChange={(e) => setCommentText(e.target.value)}
-                            className="p-3 rounded-lg border border-gray-200 focus:border-blue-500 outline-none w-full min-h-[80px] pr-12 resize-y"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => commentFileInputRef.current.click()}
-                            className="absolute bottom-3 right-3 text-gray-400 hover:text-blue-600 transition-colors p-1"
-                            title="Adjuntar foto"
-                          >
-                            <ImageIcon size={20} />
-                          </button>
-                          <input
-                            type="file"
-                            ref={commentFileInputRef}
-                            className="hidden"
-                            accept="image/*"
-                            onChange={handleCommentImageUpload}
-                          />
-                        </div>
-                        {isCompressingComment && <div className="mt-2 text-xs text-blue-600 flex items-center gap-1">Procesando imagen...</div>}
-                        {commentImage && (
-                          <div className="mt-2 relative inline-block">
-                            <img src={commentImage} alt="Preview" className="h-20 w-auto rounded border border-blue-200 object-cover" />
-                            <button type="button" onClick={() => setCommentImage('')} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 shadow-sm hover:bg-red-600"><X size={12} /></button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <button type="submit" disabled={isCompressingComment} className={`${ntrBlue} text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-800 transition-colors disabled:opacity-50`}>Enviar Comentario</button>
-                  </form>
-                </div>
-              </div>
-            </article>
-          </div>
-        )}
+          } />
+        </Routes>
       </main>
       <button onClick={handleAdminTrigger} className="fixed bottom-4 right-4 text-gray-300 opacity-20 hover:opacity-100 transition-opacity z-50"><KeyRound size={16} /></button>
-    </div>
+    </div >
   );
 }
