@@ -46,6 +46,7 @@ export default function App() {
   const [displayLimit, setDisplayLimit] = useState(9);
   const [maxAutoLoad, setMaxAutoLoad] = useState(36);
   const [hasMore, setHasMore] = useState(false);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
 
   // ESTADOS DE NOTIFICACIÓN ANIMADA (ENTRADA Y SALIDA)
   const [notification, setNotification] = useState({ show: false, message: '', type: 'success', isVisible: false });
@@ -265,7 +266,7 @@ export default function App() {
   useEffect(() => {
     if (!currentUser) return;
 
-    // Si no hay artículos todavía, forzamos que se muestre el esqueleto
+    // Si no hay artículos todavía, forzamos que se muestre el esqueleto base
     if (articles.length === 0) setLoading(true);
 
     const q = query(collection(db, "noticias"), orderBy("timestamp", "desc"), limit(displayLimit + 1));
@@ -280,10 +281,14 @@ export default function App() {
       }
 
       // Retrasar artificialmente medio segundo para que la animación se alcance a ver de forma agradable
-      setTimeout(() => setLoading(false), 600);
+      setTimeout(() => {
+        setLoading(false);
+        setIsFetchingMore(false);
+      }, 600);
 
     }, (err) => {
       setLoading(false);
+      setIsFetchingMore(false);
     });
     return () => unsubscribe();
   }, [currentUser, displayLimit]);
@@ -291,14 +296,15 @@ export default function App() {
   useEffect(() => {
     const handleScroll = () => {
       if (window.innerHeight + document.documentElement.scrollTop >= document.documentElement.offsetHeight - 500) {
-        if (hasMore && displayLimit < maxAutoLoad) {
+        if (hasMore && displayLimit < maxAutoLoad && !isFetchingMore) {
+          setIsFetchingMore(true);
           setDisplayLimit(prev => prev + 9);
         }
       }
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [hasMore, displayLimit, maxAutoLoad]);
+  }, [hasMore, displayLimit, maxAutoLoad, isFetchingMore]);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -763,8 +769,8 @@ export default function App() {
               )}
 
               {/* ESQUELETOS AL HACER SCROLL O PAGINACIÓN (Se agregan al final de las reales) */}
-              {!loading && articles.length > 0 && articles.length < displayLimit && hasMore && (
-                Array.from({ length: Math.min(9, displayLimit - articles.length) }).map((_, i) => (
+              {!loading && articles.length > 0 && isFetchingMore && hasMore && (
+                Array.from({ length: 9 }).map((_, i) => (
                   <article key={`more-skeleton-${i}`} className="bg-white rounded-xl shadow-sm border flex flex-col h-full relative overflow-hidden">
                     <div className="relative h-56 bg-gray-200 animate-pulse"></div>
                     <div className="p-6 flex-grow flex flex-col justify-between">
@@ -792,15 +798,19 @@ export default function App() {
             {/* BOTÓN SIGUIENTE PÁGINA O SPINNER SCROLL */}
             {hasMore && (
               <div className="mt-12 flex justify-center pb-8">
-                {displayLimit >= maxAutoLoad ? (
+                {displayLimit >= maxAutoLoad && !isFetchingMore ? (
                   <button
-                    onClick={() => { setMaxAutoLoad(prev => prev + 36); setDisplayLimit(prev => prev + 9); }}
+                    onClick={() => {
+                      setIsFetchingMore(true);
+                      setMaxAutoLoad(prev => prev + 36);
+                      setDisplayLimit(prev => prev + 9);
+                    }}
                     className={`${ntrBlue} text-white px-8 py-3 rounded-full font-bold shadow-lg hover:shadow-xl hover:scale-105 transition-all outline-none`}
                   >
                     Ver Siguiente Página
                   </button>
                 ) : (
-                  <Loader2 className="animate-spin text-blue-900" size={32} />
+                  <Loader2 className={`animate-spin text-blue-900 ${displayLimit >= maxAutoLoad ? 'hidden' : 'block'}`} size={32} />
                 )}
               </div>
             )}
