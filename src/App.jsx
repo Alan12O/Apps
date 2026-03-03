@@ -270,22 +270,37 @@ export default function App() {
     if (articles.length === 0) setLoading(true);
 
     const q = query(collection(db, "noticias"), orderBy("timestamp", "desc"), limit(displayLimit + 1));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+
+    // Agregamos { includeMetadataChanges: true } para que Firebase nos avise cuando haya 
+    // terminado de resolver la petición de red con el servidor, y no solo la memoria local (caché).
+    const unsubscribe = onSnapshot(q, { includeMetadataChanges: true }, (snapshot) => {
+      let nextHasMore = false;
+      let newArticles = [];
+
       if (snapshot.docs.length > displayLimit) {
-        setHasMore(true);
+        nextHasMore = true;
         const docsToShow = snapshot.docs.slice(0, displayLimit);
-        setArticles(docsToShow.map(doc => ({ id: doc.id, ...doc.data() })));
+        newArticles = docsToShow.map(doc => ({ id: doc.id, ...doc.data() }));
       } else {
-        setHasMore(false);
-        setArticles(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        nextHasMore = false;
+        newArticles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       }
 
-      // Retrasar artificialmente medio segundo para que la animación se alcance a ver de forma agradable
-      setTimeout(() => {
-        setLoading(false);
-        setIsFetchingMore(false);
-      }, 600);
+      setArticles(newArticles);
+      setHasMore(nextHasMore);
 
+      // Si la respuesta viene directamente del servidor de internet (!fromCache)
+      // O si la cantidad devuelta localmente mágicamente ya logró satisfacer lo que pedíamos (reachedLimit)
+      const isServerResponse = !snapshot.metadata.fromCache;
+      const reachedLimit = snapshot.docs.length > displayLimit;
+
+      // Solo detenemos las animaciones cuando tenemos la certeza definitiva para este tamaño de página
+      if (isServerResponse || reachedLimit) {
+        setTimeout(() => {
+          setLoading(false);
+          setIsFetchingMore(false);
+        }, 300); // 300ms es visualmente limpio y suficiente
+      }
     }, (err) => {
       setLoading(false);
       setIsFetchingMore(false);
