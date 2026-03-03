@@ -69,6 +69,9 @@ export default function App() {
 
   const [isMaintenance, setIsMaintenance] = useState(false);
   const [checkingMaintenance, setCheckingMaintenance] = useState(true);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [loginError, setLoginError] = useState('');
   const [selectedArticle, setSelectedArticle] = useState(null);
 
   const navigate = useNavigate();
