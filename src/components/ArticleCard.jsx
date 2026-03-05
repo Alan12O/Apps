@@ -14,7 +14,7 @@ export default function ArticleCard({
 }) {
     return (
         <article className="bg-white rounded-xl shadow-sm hover:shadow-2xl transition-all border group cursor-pointer flex flex-col h-full relative">
-            <Link to={`/noticia/${article.id}`} className="block h-full cursor-pointer flex-grow flex flex-col">
+            <Link to={`/noticia/${article.id}`} aria-label={`Leer nota completa sobre: ${article.title}`} className="block h-full cursor-pointer flex-grow flex flex-col">
                 <div className="relative h-56 overflow-hidden">
                     <img src={article.image} alt={article.title} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
                     <div className="absolute top-4 left-4"><span className={`${ntrBlue} text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg uppercase`}>{article.category}</span></div>
@@ -36,8 +36,8 @@ export default function ArticleCard({
                         </div>
                         {(isAdmin || isEditMode) && canManageArticle(article) && (
                             <div className="flex gap-2 relative z-20">
-                                <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleEdit(e, article); }} className="text-blue-500 p-1 bg-blue-50 rounded"><Edit size={16} /></button>
-                                <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDelete(e, article); }} className="text-red-400 p-1 bg-red-50 rounded"><Trash2 size={16} /></button>
+                                <button aria-label="Editar noticia" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleEdit(e, article); }} className="text-blue-500 p-1 bg-blue-50 rounded"><Edit size={16} /></button>
+                                <button aria-label="Borrar noticia" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDelete(e, article); }} className="text-red-400 p-1 bg-red-50 rounded"><Trash2 size={16} /></button>
                             </div>
                         )}
                     </div>

@@ -20,7 +20,7 @@ export default function Header({
     return (
         <header className="bg-white shadow-md border-b border-gray-200 sticky top-0 z-30">
             <div className="max-w-6xl mx-auto px-4 h-20 flex items-center justify-between">
-                <div className="flex items-center gap-4 cursor-pointer group" onClick={handleLogoClick}>
+                <div role="button" tabIndex={0} aria-label="Logo, doble clic abre administrador, clic o Enter va al inicio" onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleLogoClick(e); }} className="flex items-center gap-4 cursor-pointer group" onClick={handleLogoClick}>
                     <div className={`${ntrBlue} px-3 py-2 rounded shadow-md flex flex-col items-center justify-center transition-colors group-hover:bg-blue-800 w-[72px] h-[52px]`}>
                         {showNtrLogo ? (
                             <>
@@ -47,8 +47,8 @@ export default function Header({
                         <Link to="/redaccion" onClick={resetForm} className={`px-4 py-2 rounded-full font-bold text-sm transition-all flex items-center gap-2 ${location.pathname === '/redaccion' ? `${ntrBlue} text-white shadow-lg` : 'text-gray-500 hover:bg-gray-50'}`}>
                             <PlusCircle size={18} /> <span className="hidden sm:inline">Redacción</span>
                         </Link>
-                        {isAdmin && <button onClick={() => { signOut(auth); showNotification("Sesión cerrada", "error"); }} className="p-2 text-gray-400 hover:text-red-600"><LogOut size={18} /></button>}
-                        {isEditMode && !isAdmin && <button onClick={() => { setIsEditMode(false); showNotification("Saliste del modo edición", "error"); }} className="p-2 text-gray-400 hover:text-blue-600" title="Salir de Modo Edición"><LogOut size={18} /></button>}
+                        {isAdmin && <button aria-label="Cerrar sesión" onClick={() => { signOut(auth); showNotification("Sesión cerrada", "error"); }} className="p-2 text-gray-400 hover:text-red-600"><LogOut size={18} /></button>}
+                        {isEditMode && !isAdmin && <button aria-label="Salir de Modo Edición" onClick={() => { setIsEditMode(false); showNotification("Saliste del modo edición", "error"); }} className="p-2 text-gray-400 hover:text-blue-600" title="Salir de Modo Edición"><LogOut size={18} /></button>}
                     </nav>
                 </div>
             </div>

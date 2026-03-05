@@ -45,9 +45,9 @@ export default function Editor({
                 <h2 className={`text-2xl font-bold flex items-center mb-6 ${ntrText}`}>{editingId ? <Edit size={28} className="mr-3" /> : <PlusCircle size={28} className="mr-3" />} Panel de Redacción</h2>
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="col-span-1 md:col-span-2"><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Titular</label><input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full p-4 bg-gray-50 border border-gray-200 rounded-lg font-bold text-lg outline-none focus:ring-2 focus:ring-blue-800" required /></div>
-                        <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Autor</label><input type="text" value={author} onChange={(e) => setAuthor(e.target.value)} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg outline-none" /></div>
-                        <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Sección</label><select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg outline-none"><option>General</option><option>Tecnología</option><option>Deportes</option><option>Arte</option><option>Política</option><option>Seguridad</option><option>Municipios</option></select></div>
+                        <div className="col-span-1 md:col-span-2"><label htmlFor="titleInput" className="block text-xs font-bold text-gray-500 uppercase mb-1">Titular</label><input id="titleInput" type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full p-4 bg-gray-50 border border-gray-200 rounded-lg font-bold text-lg outline-none focus:ring-2 focus:ring-blue-800" required /></div>
+                        <div><label htmlFor="authorInput" className="block text-xs font-bold text-gray-500 uppercase mb-1">Autor</label><input id="authorInput" type="text" value={author} onChange={(e) => setAuthor(e.target.value)} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg outline-none" /></div>
+                        <div><label htmlFor="categorySelect" className="block text-xs font-bold text-gray-500 uppercase mb-1">Sección</label><select id="categorySelect" value={category} onChange={(e) => setCategory(e.target.value)} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg outline-none"><option>General</option><option>Tecnología</option><option>Deportes</option><option>Arte</option><option>Política</option><option>Seguridad</option><option>Municipios</option></select></div>
                     </div>
 
                     <div>
@@ -63,7 +63,7 @@ export default function Editor({
                                     </div>
                                     <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
                                         {presetImages.map((preset, pidx) => (
-                                            <button type="button" key={`p-${pidx}`} onClick={() => setImage(getRandomImageUrl(preset.keyword))} className="text-xs p-2 rounded-lg border bg-white flex flex-col items-center justify-center text-center gap-2 hover:border-blue-900 hover:bg-blue-50 transition-colors">
+                                            <button type="button" aria-label={`Usar imagen predefinida de ${preset.name}`} key={`p-${pidx}`} onClick={() => setImage(getRandomImageUrl(preset.keyword))} className="text-xs p-2 rounded-lg border bg-white flex flex-col items-center justify-center text-center gap-2 hover:border-blue-900 hover:bg-blue-50 transition-colors">
                                                 {preset.icon} {preset.name}
                                             </button>
                                         ))}
@@ -73,7 +73,7 @@ export default function Editor({
                                 <div className="relative h-64 w-full rounded-lg overflow-hidden group shadow-lg">
                                     <img src={image} alt="Preview" className="w-full h-full object-cover" />
                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                        <button type="button" onClick={() => setImage('')} className="bg-white text-red-600 px-4 py-2 rounded-full font-bold shadow-lg transform hover:scale-105 transition-transform flex items-center gap-2">
+                                        <button type="button" aria-label="Eliminar imagen de portada" onClick={() => setImage('')} className="bg-white text-red-600 px-4 py-2 rounded-full font-bold shadow-lg transform hover:scale-105 transition-transform flex items-center gap-2">
                                             <Trash2 size={16} /> Cambiar imagen
                                         </button>
                                     </div>
@@ -98,6 +98,7 @@ export default function Editor({
                                         />
                                         <button
                                             type="button"
+                                            aria-label="Mejorar redacción con IA base Zacatecas"
                                             onClick={() => handleAiRewriteBlock(block.id, block.value)}
                                             disabled={activeAiBlockId === block.id}
                                             className={`absolute bottom-3 right-3 p-2 rounded-full shadow-md transition-all ${activeAiBlockId === block.id ? 'bg-gray-100 text-gray-400' : 'bg-gradient-to-br from-indigo-600 to-blue-600 text-white hover:scale-110 active:scale-95'}`}
@@ -110,7 +111,7 @@ export default function Editor({
                                         {block.value ? (
                                             <div className="relative inline-block w-full">
                                                 <img src={block.value} alt="Contenido" className="max-h-64 mx-auto rounded shadow-sm" />
-                                                <button type="button" onClick={() => updateBlockValue(block.id, '')} className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full shadow-md hover:bg-red-600 transition-colors"><X size={14} /></button>
+                                                <button type="button" aria-label="Eliminar foto de este bloque" onClick={() => updateBlockValue(block.id, '')} className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full shadow-md hover:bg-red-600 transition-colors"><X size={14} /></button>
                                             </div>
                                         ) : (
                                             <div className="py-8 cursor-pointer text-gray-400 hover:text-gray-600 transition-colors" onClick={() => contentFileInputRefs.current[block.id].click()}>
@@ -122,9 +123,9 @@ export default function Editor({
                                     </div>
                                 )}
                                 <div className="absolute -right-10 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-1">
-                                    <button type="button" onClick={() => moveBlockUp(index)} disabled={index === 0} className="p-1.5 bg-white border rounded shadow hover:bg-gray-50"><ArrowUp size={14} /></button>
-                                    <button type="button" onClick={() => moveBlockDown(index)} disabled={index === contentBlocks.length - 1} className="p-1.5 bg-white border rounded shadow hover:bg-gray-50"><ArrowDown size={14} /></button>
-                                    <button type="button" onClick={() => removeBlock(block.id)} className="p-1.5 bg-white border text-red-400 rounded shadow hover:bg-red-50"><Trash2 size={14} /></button>
+                                    <button type="button" aria-label="Mover párrafo hacia arriba" onClick={() => moveBlockUp(index)} disabled={index === 0} className="p-1.5 bg-white border rounded shadow hover:bg-gray-50"><ArrowUp size={14} /></button>
+                                    <button type="button" aria-label="Mover párrafo hacia abajo" onClick={() => moveBlockDown(index)} disabled={index === contentBlocks.length - 1} className="p-1.5 bg-white border rounded shadow hover:bg-gray-50"><ArrowDown size={14} /></button>
+                                    <button type="button" aria-label="Eliminar este párrafo" onClick={() => removeBlock(block.id)} className="p-1.5 bg-white border text-red-400 rounded shadow hover:bg-red-50"><Trash2 size={14} /></button>
                                 </div>
                             </div>
                         ))}

@@ -70,7 +70,7 @@ export default function ArticleView({
 
     return (
         <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-right-8 duration-500">
-            <button onClick={() => navigate('/')} className="m-6 flex items-center gap-2 text-gray-500 hover:text-blue-900 transition-colors font-bold"><ArrowLeft size={20} /> Volver</button>
+            <button aria-label="Volver a la página principal" onClick={() => navigate('/')} className="m-6 flex items-center gap-2 text-gray-500 hover:text-blue-900 transition-colors font-bold"><ArrowLeft size={20} /> Volver</button>
             {isLoadingFromUrl ? (
                 <div className="p-24 text-center text-gray-500 flex flex-col items-center">
                     <Loader2 className="animate-spin mb-4 text-blue-900" size={48} />
@@ -80,7 +80,7 @@ export default function ArticleView({
                 <article>
                     <div className="h-64 md:h-96 relative group">
                         <img src={selectedArticle.image} alt={selectedArticle.title} className="w-full h-full object-cover" />
-                        <button onClick={() => setFullScreenImage(selectedArticle.image)} className="absolute top-4 right-4 md:top-6 md:right-6 bg-black/50 text-white p-2 md:p-3 rounded-full backdrop-blur-sm shadow-lg flex items-center gap-2 z-10 font-bold text-sm hover:bg-black/70 transition-all opacity-80 hover:opacity-100">
+                        <button aria-label="Ver foto a pantalla completa" onClick={() => setFullScreenImage(selectedArticle.image)} className="absolute top-4 right-4 md:top-6 md:right-6 bg-black/50 text-white p-2 md:p-3 rounded-full backdrop-blur-sm shadow-lg flex items-center gap-2 z-10 font-bold text-sm hover:bg-black/70 transition-all opacity-80 hover:opacity-100">
                             <Maximize2 size={20} /> <span className="hidden sm:inline">Ver foto completa</span>
                         </button>
                         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
@@ -129,7 +129,7 @@ export default function ArticleView({
                                                         {editCommentImage && (
                                                             <div className="relative inline-block">
                                                                 <img src={editCommentImage} className="h-16 w-auto rounded border border-gray-200 object-cover" alt="edit" />
-                                                                <button onClick={() => setEditCommentImage('')} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"><X size={10} /></button>
+                                                                <button aria-label="Eliminar foto" onClick={() => setEditCommentImage('')} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"><X size={10} /></button>
                                                             </div>
                                                         )}
                                                         <button onClick={() => editCommentFileInputRef.current.click()} className="text-gray-600 hover:text-blue-800 bg-gray-100 hover:bg-gray-200 p-2 rounded-lg text-sm flex items-center gap-2 transition-colors">
@@ -162,6 +162,7 @@ export default function ArticleView({
                                                     <div className="mt-3 rounded-lg overflow-hidden border border-gray-200 max-w-sm relative group/img">
                                                         <img src={comment.image} alt="Adjunto del comentario" className="w-full h-auto object-cover" />
                                                         <button
+                                                            aria-label="Ver imagen del comentario en pantalla completa"
                                                             onClick={() => setFullScreenImage(comment.image)}
                                                             className="absolute bottom-2 right-2 bg-black/50 hover:bg-black/70 text-white p-1.5 rounded-full backdrop-blur-sm opacity-0 group-hover/img:opacity-100 transition-all shadow-md"
                                                             title="Ver en grande"
@@ -173,6 +174,7 @@ export default function ArticleView({
                                                 {isAdmin && (
                                                     <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                         <button
+                                                            aria-label="Editar Comentario"
                                                             onClick={() => startEditingComment(comment)}
                                                             className="text-blue-400 hover:text-blue-600 bg-white shadow-sm border border-blue-100 transition-colors p-1.5 rounded"
                                                             title="Editar Comentario"
@@ -180,6 +182,7 @@ export default function ArticleView({
                                                             <Edit size={14} />
                                                         </button>
                                                         <button
+                                                            aria-label="Borrar Comentario"
                                                             onClick={() => handleDeleteComment(comment)}
                                                             className="text-red-400 hover:text-red-600 bg-white shadow-sm border border-red-100 transition-colors p-1.5 rounded"
                                                             title="Borrar Comentario"
@@ -210,6 +213,7 @@ export default function ArticleView({
                                             />
                                             <button
                                                 type="button"
+                                                aria-label="Adjuntar foto al comentario"
                                                 onClick={() => commentFileInputRef.current.click()}
                                                 className="absolute bottom-3 right-3 text-gray-400 hover:text-blue-600 transition-colors p-1"
                                                 title="Adjuntar foto"
@@ -228,7 +232,7 @@ export default function ArticleView({
                                         {commentImage && (
                                             <div className="mt-2 relative inline-block">
                                                 <img src={commentImage} alt="Preview" className="h-20 w-auto rounded border border-blue-200 object-cover" />
-                                                <button type="button" onClick={() => setCommentImage('')} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 shadow-sm hover:bg-red-600"><X size={12} /></button>
+                                                <button type="button" aria-label="Eliminar foto antes de enviar" onClick={() => setCommentImage('')} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 shadow-sm hover:bg-red-600"><X size={12} /></button>
                                             </div>
                                         )}
                                     </div>
