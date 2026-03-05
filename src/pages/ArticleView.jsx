@@ -1,9 +1,10 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Maximize2, User, Calendar, Lock, Edit, MessageSquare, ImageIcon, X, Trash2, Loader2 } from 'lucide-react';
+import { getFirestore, doc, getDoc } from 'firebase/firestore';
 
 export default function ArticleView({
-    selectedArticle,
+    selectedArticle: initialArticle,
     ntrBlue,
     ntrText,
     isAdmin,
@@ -38,11 +39,44 @@ export default function ArticleView({
     setCommentImage
 }) {
     const navigate = useNavigate();
+    const { id } = useParams();
+    const [selectedArticle, setSelectedArticle] = useState(initialArticle);
+    const [isLoadingFromUrl, setIsLoadingFromUrl] = useState(!initialArticle);
+    const db = getFirestore();
+
+    useEffect(() => {
+        const fetchArticle = async () => {
+            if (!initialArticle && id) {
+                try {
+                    const docRef = doc(db, "noticias", id);
+                    const docSnap = await getDoc(docRef);
+                    if (docSnap.exists()) {
+                        setSelectedArticle({ id: docSnap.id, ...docSnap.data() });
+                    } else {
+                        navigate('/'); // Si borraron la noticia vuelve a inicio
+                    }
+                } catch (error) {
+                    navigate('/');
+                } finally {
+                    setIsLoadingFromUrl(false);
+                }
+            } else {
+                setSelectedArticle(initialArticle);
+                setIsLoadingFromUrl(false);
+            }
+        };
+        fetchArticle();
+    }, [id, initialArticle, navigate, db]);
 
     return (
         <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-right-8 duration-500">
-            <button onClick={() => navigate(-1)} className="m-6 flex items-center gap-2 text-gray-500 hover:text-blue-900 transition-colors font-bold"><ArrowLeft size={20} /> Volver</button>
-            {selectedArticle ? (
+            <button onClick={() => navigate('/')} className="m-6 flex items-center gap-2 text-gray-500 hover:text-blue-900 transition-colors font-bold"><ArrowLeft size={20} /> Volver</button>
+            {isLoadingFromUrl ? (
+                <div className="p-24 text-center text-gray-500 flex flex-col items-center">
+                    <Loader2 className="animate-spin mb-4 text-blue-900" size={48} />
+                    <p className="font-bold">Cargando noticia...</p>
+                </div>
+            ) : selectedArticle ? (
                 <article>
                     <div className="h-64 md:h-96 relative group">
                         <img src={selectedArticle.image} alt={selectedArticle.title} className="w-full h-full object-cover" />
