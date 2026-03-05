@@ -4,5 +4,5 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: './', // <--- ESTA LÍNEA ES MÁGICA, NO LA BORRES
+  base: '/', // Cambiado a '/' para que el enrutamiento y las recargas funcionen en vercel/rutas profundas
 })
