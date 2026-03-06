@@ -164,6 +164,10 @@ export default function App() {
     } else {
       setContentBlocks(contentBlocks.filter(block => block.id !== id));
     }
+    // Liberar memoria si era una imagen
+    if (contentFileInputRefs.current[id]) {
+      delete contentFileInputRefs.current[id];
+    }
   };
 
   const moveBlockUp = (index) => {
