@@ -142,16 +142,16 @@ export default function ArticleView({
                                                         )}
                                                         {editCommentAvatar && (
                                                             <div className="relative inline-block mb-2 ml-2">
-                                                                <img src={editCommentAvatar} className="h-16 w-16 rounded-full border-2 border-blue-200 object-cover" alt="edit avatar" />
-                                                                <button aria-label="Eliminar foto de perfil" onClick={() => setEditCommentAvatar('')} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1 shadow-sm"><X size={10} /></button>
+                                                                <img src={editCommentAvatar} className="h-16 w-16 rounded-full border border-gray-200 object-cover" alt="edit avatar" />
+                                                                <button aria-label="Eliminar foto de perfil" onClick={() => setEditCommentAvatar('')} className="absolute -top-1 -right-1 bg-gray-800 hover:bg-red-500 text-white rounded-full p-1 shadow-sm transition-colors"><X size={10} /></button>
                                                             </div>
                                                         )}
 
                                                         <div className="flex w-full gap-2 mt-2">
-                                                            <button onClick={() => editCommentFileInputRef.current.click()} className="flex-1 text-gray-600 hover:text-blue-800 bg-gray-100 hover:bg-gray-200 p-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-colors">
+                                                            <button onClick={() => editCommentFileInputRef.current.click()} className="flex-1 text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 p-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-colors">
                                                                 <ImageIcon size={16} /> Foto Adjunta
                                                             </button>
-                                                            <button onClick={() => editCommentAvatarInputRef.current.click()} className="flex-1 text-gray-600 hover:text-green-800 bg-green-50 hover:bg-green-100 p-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-colors">
+                                                            <button onClick={() => editCommentAvatarInputRef.current.click()} className="flex-1 text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 p-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-colors">
                                                                 <User size={16} /> Foto Perfil
                                                             </button>
                                                         </div>
@@ -235,19 +235,22 @@ export default function ArticleView({
                                     <div className="flex flex-col gap-2 relative">
                                         <input type="text" placeholder="Tu nombre" value={commentName} onChange={(e) => setCommentName(e.target.value)} className="p-3 rounded-lg border border-gray-200 focus:border-blue-500 outline-none w-full" />
 
-                                        <div className="relative flex items-center bg-white border border-gray-200 rounded-lg p-2 mt-1">
+                                        <div
+                                            className="relative flex items-center border border-gray-200 rounded-lg p-2 mt-1 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer group"
+                                            onClick={() => commentAvatarInputRef.current.click()}
+                                        >
                                             {commentAvatar ? (
-                                                <div className="relative mr-2">
-                                                    <img src={commentAvatar} alt="Avatar" className="w-8 h-8 rounded-full object-cover border border-blue-200" />
-                                                    <button type="button" onClick={() => setCommentAvatar('')} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-px shadow-sm"><X size={10} /></button>
+                                                <div className="relative mr-3" onClick={(e) => e.stopPropagation()}>
+                                                    <img src={commentAvatar} alt="Avatar" className="w-8 h-8 rounded-full object-cover border border-gray-300 shadow-sm" />
+                                                    <button type="button" aria-label="Quitar foto" onClick={() => setCommentAvatar('')} className="absolute -top-1.5 -right-1.5 bg-gray-800 hover:bg-red-500 text-white rounded-full p-0.5 shadow transition-colors"><X size={10} /></button>
                                                 </div>
                                             ) : (
-                                                <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-300 mr-2"><User size={16} /></div>
+                                                <div className="w-8 h-8 rounded-full bg-white border border-gray-300 flex items-center justify-center text-gray-400 mr-3 shadow-sm group-hover:text-gray-600 transition-colors"><User size={16} /></div>
                                             )}
 
-                                            <button type="button" onClick={() => commentAvatarInputRef.current.click()} className="text-xs font-bold text-blue-600 hover:text-blue-800 px-2 flex-grow text-left">
-                                                {commentAvatar ? 'Cambiar Foto de Perfil' : 'Subir Foto de Perfil (Opcional)'}
-                                            </button>
+                                            <div className="text-sm font-medium text-gray-500 group-hover:text-gray-900 transition-colors flex-grow">
+                                                {commentAvatar ? 'Cambiar foto de perfil' : 'Añadir foto de perfil'}
+                                            </div>
                                             <input type="file" ref={commentAvatarInputRef} className="hidden" accept="image/*" onChange={handleCommentAvatarUpload} />
                                         </div>
                                     </div>
