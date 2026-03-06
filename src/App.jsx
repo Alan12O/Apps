@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Routes, Route, Link, useNavigate, useLocation, useParams } from 'react-router-dom';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import {
   PlusCircle, Trash2, Calendar, Image as ImageIcon, Send, Globe,
   Briefcase, Cpu, Palette, Upload, ArrowLeft, MessageSquare, User, X,
   Type, AlignLeft, ArrowUp, ArrowDown, Edit, Lock, LogOut, KeyRound,
-  Maximize2, Settings, Sparkles, Loader2, AlertTriangle, CheckCircle, FileText
+  Maximize2, Settings, Sparkles, Loader2, AlertTriangle, CheckCircle
 } from 'lucide-react';
 
 // --- 1. IMPORTACIONES DE FIREBASE ---
@@ -74,7 +74,7 @@ export default function App() {
 
   const [myPosts, setMyPosts] = useState(() => {
     try { return JSON.parse(localStorage.getItem('myPosts') || '[]'); }
-    catch (e) { return []; }
+    catch { return []; }
   });
 
   const [isMaintenance, setIsMaintenance] = useState(false);
@@ -252,7 +252,7 @@ export default function App() {
       } else {
         showNotification("La IA no devolvió respuesta. Intenta de nuevo.", "error");
       }
-    } catch (error) {
+    } catch {
       showNotification("Error de conexión con el servidor IA. Revisa tu internet.", "error");
     } finally {
       setActiveAiBlockId(null);
@@ -348,7 +348,7 @@ export default function App() {
           setIsFetchingMore(false);
         }, 300); // 300ms es visualmente limpio y suficiente
       }
-    }, (err) => {
+    }, () => {
       setLoading(false);
       setIsFetchingMore(false);
     });
@@ -453,7 +453,7 @@ export default function App() {
       setShowLoginModal(false);
       setIsEditMode(false);
       showNotification("Sesión iniciada como Administrador");
-    } catch (error) {
+    } catch {
       if (passwordInput === "administrador") {
         setIsAdmin(true);
         setShowLoginModal(false);
@@ -549,7 +549,7 @@ export default function App() {
         await deleteDoc(doc(db, "noticias", article.id));
         showNotification("Noticia eliminada correctamente");
         if (location.pathname.startsWith('/noticia/')) navigate('/');
-      } catch (error) {
+      } catch {
         showNotification("Error al eliminar la noticia", "error");
       }
     }
@@ -572,7 +572,7 @@ export default function App() {
       setSelectedArticle(prev => ({ ...prev, comments: [...(prev.comments || []), newComment] }));
       setCommentName(''); setCommentText(''); setCommentImage('');
       showNotification("¡Tu opinión ha sido publicada!");
-    } catch (error) {
+    } catch {
       showNotification("Error al publicar el comentario", "error");
     }
   };
@@ -603,7 +603,7 @@ export default function App() {
       await updateDoc(doc(db, "noticias", selectedArticle.id), { comments: arrayRemove(commentToDelete) });
       setSelectedArticle(prev => ({ ...prev, comments: prev.comments.filter(c => c.id !== commentToDelete.id) }));
       showNotification("Comentario eliminado correctamente");
-    } catch (error) {
+    } catch {
       showNotification("Error al eliminar el comentario", "error");
     }
   };
@@ -622,16 +622,11 @@ export default function App() {
       setSelectedArticle(prev => ({ ...prev, comments: updated }));
       setEditingCommentId(null);
       showNotification("Comentario actualizado exitosamente");
-    } catch (error) {
+    } catch {
       showNotification("Error al actualizar el comentario", "error");
     }
   };
 
-  const openArticle = (article) => {
-    setSelectedArticle({ ...article, comments: article.comments || [] });
-    navigate(`/noticia/${article.id}`);
-    window.scrollTo(0, 0);
-  };
 
   const renderArticleContent = (contentData) => {
     if (!contentData) return null;

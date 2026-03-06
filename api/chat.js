@@ -1,9 +1,11 @@
+/* eslint-env node */
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export default async function handler(req, res) {
   // 1. Vercel inyecta estas variables automáticamente desde su panel
+  // eslint-disable-next-line no-undef
   const llaves = [process.env.GEMINI_KEY_A, process.env.GEMINI_KEY_B];
-  
+
   const { prompt } = req.body;
 
   // 2. Lógica de rotación
@@ -16,7 +18,7 @@ export default async function handler(req, res) {
 
       return res.status(200).json({ respuesta: response.text() });
     } catch (error) {
-      console.error("Fallo una llave, intentando la siguiente...");
+      console.error("Fallo una llave, intentando la siguiente...", error.message);
       continue; // Si falla, el bucle prueba la siguiente llave
     }
   }

@@ -55,7 +55,7 @@ export default function ArticleView({
                     } else {
                         navigate('/'); // Si borraron la noticia vuelve a inicio
                     }
-                } catch (error) {
+                } catch {
                     navigate('/');
                 } finally {
                     setIsLoadingFromUrl(false);
