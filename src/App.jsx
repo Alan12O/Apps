@@ -273,6 +273,10 @@ export default function App() {
 
   // --- EFECTOS ---
   useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+
+  useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         // Usuario conectado...
