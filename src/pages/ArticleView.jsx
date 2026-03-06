@@ -36,7 +36,15 @@ export default function ArticleView({
     handleCommentImageUpload,
     isCompressingComment,
     commentImage,
-    setCommentImage
+    setCommentImage,
+    commentAvatar,
+    setCommentAvatar,
+    commentAvatarInputRef,
+    handleCommentAvatarUpload,
+    editCommentAvatar,
+    setEditCommentAvatar,
+    editCommentAvatarInputRef,
+    handleEditCommentAvatarUpload
 }) {
     const navigate = useNavigate();
     const { id } = useParams();
@@ -125,17 +133,31 @@ export default function ArticleView({
                                                     <input type="text" value={editCommentAuthor} onChange={(e) => setEditCommentAuthor(e.target.value)} className="w-full p-2 mb-2 border border-gray-300 rounded-lg outline-none focus:border-blue-500" placeholder="Nombre del autor" />
                                                     <textarea value={editCommentText} onChange={(e) => setEditCommentText(e.target.value)} className="w-full p-2 mb-2 border border-gray-300 rounded-lg min-h-[80px] outline-none focus:border-blue-500 resize-y" placeholder="Comentario" />
 
-                                                    <div className="flex gap-2 items-center mb-4">
+                                                    <div className="flex gap-2 items-center mb-4 flex-wrap">
                                                         {editCommentImage && (
-                                                            <div className="relative inline-block">
-                                                                <img src={editCommentImage} className="h-16 w-auto rounded border border-gray-200 object-cover" alt="edit" />
-                                                                <button aria-label="Eliminar foto" onClick={() => setEditCommentImage('')} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"><X size={10} /></button>
+                                                            <div className="relative inline-block mb-2">
+                                                                <img src={editCommentImage} className="h-16 w-auto rounded border border-gray-200 object-cover" alt="edit img" />
+                                                                <button aria-label="Eliminar foto adjunta" onClick={() => setEditCommentImage('')} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"><X size={10} /></button>
                                                             </div>
                                                         )}
-                                                        <button onClick={() => editCommentFileInputRef.current.click()} className="text-gray-600 hover:text-blue-800 bg-gray-100 hover:bg-gray-200 p-2 rounded-lg text-sm flex items-center gap-2 transition-colors">
-                                                            <ImageIcon size={16} /> {editCommentImage ? "Cambiar foto" : "Añadir foto"}
-                                                        </button>
+                                                        {editCommentAvatar && (
+                                                            <div className="relative inline-block mb-2 ml-2">
+                                                                <img src={editCommentAvatar} className="h-16 w-16 rounded-full border-2 border-blue-200 object-cover" alt="edit avatar" />
+                                                                <button aria-label="Eliminar foto de perfil" onClick={() => setEditCommentAvatar('')} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1 shadow-sm"><X size={10} /></button>
+                                                            </div>
+                                                        )}
+
+                                                        <div className="flex w-full gap-2 mt-2">
+                                                            <button onClick={() => editCommentFileInputRef.current.click()} className="flex-1 text-gray-600 hover:text-blue-800 bg-gray-100 hover:bg-gray-200 p-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-colors">
+                                                                <ImageIcon size={16} /> Foto Adjunta
+                                                            </button>
+                                                            <button onClick={() => editCommentAvatarInputRef.current.click()} className="flex-1 text-gray-600 hover:text-green-800 bg-green-50 hover:bg-green-100 p-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-colors">
+                                                                <User size={16} /> Foto Perfil
+                                                            </button>
+                                                        </div>
+
                                                         <input type="file" ref={editCommentFileInputRef} className="hidden" accept="image/*" onChange={handleEditCommentImageUpload} />
+                                                        <input type="file" ref={editCommentAvatarInputRef} className="hidden" accept="image/*" onChange={handleEditCommentAvatarUpload} />
                                                     </div>
 
                                                     <div className="flex gap-3">
@@ -150,9 +172,17 @@ export default function ArticleView({
                                             <div key={idx} className="bg-gray-50 p-6 rounded-xl border border-gray-100 relative group">
                                                 <div className="flex justify-between items-start mb-2">
                                                     <div className="flex items-center gap-2">
-                                                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-900 font-bold text-xs">
-                                                            {comment.author?.charAt(0).toUpperCase() || 'A'}
-                                                        </div>
+                                                        {comment.avatar ? (
+                                                            <img
+                                                                src={comment.avatar}
+                                                                alt={comment.author}
+                                                                className="w-10 h-10 rounded-full border border-gray-200 object-cover shadow-sm bg-white"
+                                                            />
+                                                        ) : (
+                                                            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-900 font-bold text-sm shadow-sm">
+                                                                {comment.author?.charAt(0).toUpperCase() || 'A'}
+                                                            </div>
+                                                        )}
                                                         <span className="font-bold text-gray-900">{comment.author}</span>
                                                     </div>
                                                     <span className="text-xs text-gray-400">{comment.date}</span>
@@ -202,7 +232,25 @@ export default function ArticleView({
                             <form onSubmit={handleAddComment} className="bg-blue-50 p-6 rounded-xl border border-blue-100 relative">
                                 <h4 className="font-bold text-gray-800 mb-4">Deja tu opinión</h4>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                                    <input type="text" placeholder="Tu nombre" value={commentName} onChange={(e) => setCommentName(e.target.value)} className="p-3 rounded-lg border border-gray-200 focus:border-blue-500 outline-none w-full" />
+                                    <div className="flex flex-col gap-2 relative">
+                                        <input type="text" placeholder="Tu nombre" value={commentName} onChange={(e) => setCommentName(e.target.value)} className="p-3 rounded-lg border border-gray-200 focus:border-blue-500 outline-none w-full" />
+
+                                        <div className="relative flex items-center bg-white border border-gray-200 rounded-lg p-2 mt-1">
+                                            {commentAvatar ? (
+                                                <div className="relative mr-2">
+                                                    <img src={commentAvatar} alt="Avatar" className="w-8 h-8 rounded-full object-cover border border-blue-200" />
+                                                    <button type="button" onClick={() => setCommentAvatar('')} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-px shadow-sm"><X size={10} /></button>
+                                                </div>
+                                            ) : (
+                                                <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-300 mr-2"><User size={16} /></div>
+                                            )}
+
+                                            <button type="button" onClick={() => commentAvatarInputRef.current.click()} className="text-xs font-bold text-blue-600 hover:text-blue-800 px-2 flex-grow text-left">
+                                                {commentAvatar ? 'Cambiar Foto de Perfil' : 'Subir Foto de Perfil (Opcional)'}
+                                            </button>
+                                            <input type="file" ref={commentAvatarInputRef} className="hidden" accept="image/*" onChange={handleCommentAvatarUpload} />
+                                        </div>
+                                    </div>
                                     <div className="md:col-span-2 relative">
                                         <div className="relative">
                                             <textarea

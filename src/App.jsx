@@ -13,7 +13,7 @@ import {
   getFirestore, collection, addDoc, onSnapshot, getDocs, startAfter,
   deleteDoc, doc, updateDoc, arrayUnion, arrayRemove, query, orderBy, limit, getDoc
 } from "firebase/firestore";
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, signInAnonymously } from "firebase/auth";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
 
 // --- IMPORTACIÓN DE PÁGINAS Y COMPONENTES ---
 import Terms from './pages/Terms';
@@ -103,18 +103,21 @@ export default function App() {
   const [isCompressing, setIsCompressing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Estados del Formulario (Comentarios)
   const [commentName, setCommentName] = useState('');
   const [commentText, setCommentText] = useState('');
   const [commentImage, setCommentImage] = useState('');
+  const [commentAvatar, setCommentAvatar] = useState(''); // NUEVO AVATAR
   const [isCompressingComment, setIsCompressingComment] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editCommentAuthor, setEditCommentAuthor] = useState('');
   const [editCommentText, setEditCommentText] = useState('');
   const [editCommentImage, setEditCommentImage] = useState('');
+  const [editCommentAvatar, setEditCommentAvatar] = useState(''); // NUEVO AVATAR EDICIÓN
 
   const editCommentFileInputRef = useRef(null);
   const commentFileInputRef = useRef(null);
+  const commentAvatarInputRef = useRef(null); // NUEVO REF
+  const editCommentAvatarInputRef = useRef(null); // NUEVO REF
   const contentFileInputRefs = useRef({});
 
   const ntrBlue = "bg-blue-900";
@@ -580,12 +583,12 @@ export default function App() {
     if (!commentName.trim() || !commentText.trim() || !currentUser) return;
     try {
       const newComment = {
-        id: Date.now(), author: commentName, text: commentText, image: commentImage || null,
+        id: Date.now(), author: commentName, text: commentText, image: commentImage || null, avatar: commentAvatar || null,
         date: new Date().toLocaleDateString('es-MX', { hour: '2-digit', minute: '2-digit' })
       };
       await updateDoc(doc(db, "noticias", selectedArticle.id), { comments: arrayUnion(newComment) });
       setSelectedArticle(prev => ({ ...prev, comments: [...(prev.comments || []), newComment] }));
-      setCommentName(''); setCommentText(''); setCommentImage('');
+      setCommentName(''); setCommentText(''); setCommentImage(''); setCommentAvatar('');
       showNotification("¡Tu opinión ha sido publicada!");
     } catch {
       showNotification("Error al publicar el comentario", "error");
@@ -602,12 +605,33 @@ export default function App() {
     }
   };
 
+  const handleCommentAvatarUpload = async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setIsCompressingComment(true);
+      // Podemos usar el mismo conversor base64 de 800px para evitar peso
+      const res = await compressImage(file);
+      setCommentAvatar(res);
+      setIsCompressingComment(false);
+    }
+  };
+
   const handleEditCommentImageUpload = async (e) => {
     const file = e.target.files[0];
     if (file) {
       setIsCompressingComment(true);
       const res = await compressImage(file);
       setEditCommentImage(res);
+      setIsCompressingComment(false);
+    }
+  };
+
+  const handleEditCommentAvatarUpload = async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setIsCompressingComment(true);
+      const res = await compressImage(file);
+      setEditCommentAvatar(res);
       setIsCompressingComment(false);
     }
   };
@@ -625,13 +649,13 @@ export default function App() {
 
   const startEditingComment = (comment) => {
     setEditingCommentId(comment.id); setEditCommentAuthor(comment.author);
-    setEditCommentText(comment.text); setEditCommentImage(comment.image || '');
+    setEditCommentText(comment.text); setEditCommentImage(comment.image || ''); setEditCommentAvatar(comment.avatar || '');
   };
 
   const saveEditedComment = async () => {
     try {
       const updated = selectedArticle.comments.map(c =>
-        c.id === editingCommentId ? { ...c, author: editCommentAuthor, text: editCommentText, image: editCommentImage } : c
+        c.id === editingCommentId ? { ...c, author: editCommentAuthor, text: editCommentText, image: editCommentImage, avatar: editCommentAvatar } : c
       );
       await updateDoc(doc(db, "noticias", selectedArticle.id), { comments: updated });
       setSelectedArticle(prev => ({ ...prev, comments: updated }));
@@ -843,6 +867,14 @@ export default function App() {
               isCompressingComment={isCompressingComment}
               commentImage={commentImage}
               setCommentImage={setCommentImage}
+              commentAvatar={commentAvatar}
+              setCommentAvatar={setCommentAvatar}
+              commentAvatarInputRef={commentAvatarInputRef}
+              handleCommentAvatarUpload={handleCommentAvatarUpload}
+              editCommentAvatar={editCommentAvatar}
+              setEditCommentAvatar={setEditCommentAvatar}
+              editCommentAvatarInputRef={editCommentAvatarInputRef}
+              handleEditCommentAvatarUpload={handleEditCommentAvatarUpload}
             />
           } />
         </Routes>
