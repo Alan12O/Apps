@@ -15,11 +15,10 @@ export default function Home({
     handleDelete,
     isFetchingMore,
     hasMore,
-    displayLimit,
-    maxAutoLoad,
-    setIsFetchingMore,
-    setMaxAutoLoad,
-    setDisplayLimit
+    loadedPages,
+    maxAutoLoadPages,
+    fetchNextPage,
+    setMaxAutoLoadPages
 }) {
     return (
         <div className="animate-in fade-in duration-500 flex flex-col min-h-[calc(100vh-200px)]">
@@ -93,19 +92,18 @@ export default function Home({
             {/* BOTÓN SIGUIENTE PÁGINA O SPINNER SCROLL */}
             {(hasMore || isFetchingMore) && (
                 <div className="mt-12 flex justify-center pb-8">
-                    {displayLimit >= maxAutoLoad && !isFetchingMore ? (
+                    {loadedPages >= maxAutoLoadPages && !isFetchingMore ? (
                         <button
                             onClick={() => {
-                                setIsFetchingMore(true);
-                                setMaxAutoLoad(prev => prev + 36);
-                                setDisplayLimit(prev => prev + 9);
+                                setMaxAutoLoadPages(prev => prev + 4);
+                                fetchNextPage();
                             }}
                             className={`${ntrBlue} text-white px-8 py-3 rounded-full font-bold shadow-lg hover:shadow-xl hover:scale-105 transition-all outline-none`}
                         >
                             Ver Siguiente Página
                         </button>
                     ) : (
-                        <Loader2 className={`animate-spin text-blue-900 ${displayLimit >= maxAutoLoad ? 'hidden' : 'block'}`} size={32} />
+                        <Loader2 className={`animate-spin text-blue-900 ${loadedPages >= maxAutoLoadPages ? 'hidden' : 'block'}`} size={32} />
                     )}
                 </div>
             )}

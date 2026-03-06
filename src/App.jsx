@@ -10,7 +10,7 @@ import {
 // --- 1. IMPORTACIONES DE FIREBASE ---
 import { initializeApp } from "firebase/app";
 import {
-  getFirestore, collection, addDoc, onSnapshot,
+  getFirestore, collection, addDoc, onSnapshot, getDocs, startAfter,
   deleteDoc, doc, updateDoc, arrayUnion, arrayRemove, query, orderBy, limit, getDoc
 } from "firebase/firestore";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, signInAnonymously } from "firebase/auth";
@@ -60,10 +60,14 @@ export default function App() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [activeAiBlockId, setActiveAiBlockId] = useState(null);
   const [authError, setAuthError] = useState(null);
+  const [liveArticles, setLiveArticles] = useState([]);
+  const [pastArticles, setPastArticles] = useState([]);
+  const [lastVisible, setLastVisible] = useState(null);
 
   // PAGINACIÓN
-  const [displayLimit, setDisplayLimit] = useState(9);
-  const [maxAutoLoad, setMaxAutoLoad] = useState(36);
+  const ARTICLES_PER_PAGE = 9;
+  const [loadedPages, setLoadedPages] = useState(1);
+  const [maxAutoLoadPages, setMaxAutoLoadPages] = useState(4);
   const [hasMore, setHasMore] = useState(false);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
 
@@ -310,60 +314,74 @@ export default function App() {
   useEffect(() => {
     if (!currentUser) return;
 
-    // Si no hay artículos todavía, forzamos que se muestre el esqueleto base
-    if (articles.length === 0) setLoading(true);
+    if (liveArticles.length === 0 && pastArticles.length === 0) setLoading(true);
 
-    const q = query(collection(db, "noticias"), orderBy("timestamp", "desc"), limit(displayLimit + 1));
+    const q = query(collection(db, "noticias"), orderBy("timestamp", "desc"), limit(ARTICLES_PER_PAGE));
 
-    // Agregamos { includeMetadataChanges: true } para que Firebase nos avise cuando haya 
-    // terminado de resolver la petición de red con el servidor, y no solo la memoria local (caché).
     const unsubscribe = onSnapshot(q, { includeMetadataChanges: true }, (snapshot) => {
-      let nextHasMore = false;
-      let newArticles = [];
+      const newArticles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setLiveArticles(newArticles);
 
-      if (snapshot.docs.length > displayLimit) {
-        nextHasMore = true;
-        const docsToShow = snapshot.docs.slice(0, displayLimit);
-        newArticles = docsToShow.map(doc => ({ id: doc.id, ...doc.data() }));
-      } else {
-        nextHasMore = false;
-        newArticles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      if (snapshot.docs.length === ARTICLES_PER_PAGE && loadedPages === 1) {
+        setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
+        setHasMore(true);
+      } else if (snapshot.docs.length < ARTICLES_PER_PAGE && loadedPages === 1) {
+        setHasMore(false);
       }
 
-      setArticles(newArticles);
-      setHasMore(nextHasMore);
-
-      // Si la respuesta viene directamente del servidor de internet (!fromCache)
-      // O si la cantidad devuelta localmente mágicamente ya logró satisfacer lo que pedíamos (reachedLimit)
-      const isServerResponse = !snapshot.metadata.fromCache;
-      const reachedLimit = snapshot.docs.length > displayLimit;
-
-      // Solo detenemos las animaciones cuando tenemos la certeza definitiva para este tamaño de página
-      if (isServerResponse || reachedLimit) {
-        setTimeout(() => {
-          setLoading(false);
-          setIsFetchingMore(false);
-        }, 300); // 300ms es visualmente limpio y suficiente
+      if (!snapshot.metadata.fromCache) {
+        setTimeout(() => setLoading(false), 300);
       }
-    }, () => {
-      setLoading(false);
-      setIsFetchingMore(false);
-    });
+    }, () => setLoading(false));
+
     return () => unsubscribe();
-  }, [currentUser, displayLimit]);
+  }, [currentUser]); // Eliminado displayLimit y loadedPages para mantener 1 subs
+
+  useEffect(() => {
+    const map = new Map();
+    [...liveArticles, ...pastArticles].forEach(a => map.set(a.id, a));
+    const merged = Array.from(map.values()).sort((a, b) => b.timestamp - a.timestamp);
+    setArticles(merged);
+  }, [liveArticles, pastArticles]);
+
+  const fetchNextPage = async () => {
+    if (!lastVisible || isFetchingMore || !hasMore) return;
+    setIsFetchingMore(true);
+    try {
+      const nextQ = query(
+        collection(db, "noticias"),
+        orderBy("timestamp", "desc"),
+        startAfter(lastVisible),
+        limit(ARTICLES_PER_PAGE)
+      );
+      const snap = await getDocs(nextQ);
+      if (snap.empty) {
+        setHasMore(false);
+      } else {
+        const more = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setPastArticles(prev => [...prev, ...more]);
+        setLastVisible(snap.docs[snap.docs.length - 1]);
+        setLoadedPages(prev => prev + 1);
+        if (snap.docs.length < ARTICLES_PER_PAGE) setHasMore(false);
+      }
+    } catch {
+      console.error("Error pidiendo más articulos");
+    } finally {
+      setIsFetchingMore(false);
+    }
+  };
 
   useEffect(() => {
     const handleScroll = () => {
       if (window.innerHeight + document.documentElement.scrollTop >= document.documentElement.offsetHeight - 500) {
-        if (hasMore && displayLimit < maxAutoLoad && !isFetchingMore) {
-          setIsFetchingMore(true);
-          setDisplayLimit(prev => prev + 9);
+        if (hasMore && loadedPages < maxAutoLoadPages && !isFetchingMore) {
+          fetchNextPage();
         }
       }
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [hasMore, displayLimit, maxAutoLoad, isFetchingMore]);
+  }, [hasMore, loadedPages, maxAutoLoadPages, isFetchingMore, lastVisible]);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -738,11 +756,10 @@ export default function App() {
               handleDelete={handleDelete}
               isFetchingMore={isFetchingMore}
               hasMore={hasMore}
-              displayLimit={displayLimit}
-              maxAutoLoad={maxAutoLoad}
-              setIsFetchingMore={setIsFetchingMore}
-              setMaxAutoLoad={setMaxAutoLoad}
-              setDisplayLimit={setDisplayLimit}
+              loadedPages={loadedPages}
+              maxAutoLoadPages={maxAutoLoadPages}
+              fetchNextPage={fetchNextPage}
+              setMaxAutoLoadPages={setMaxAutoLoadPages}
             />
           } />
 
