@@ -1,0 +1,26 @@
+
+> noticiero-app@0.0.0 lint
+> eslint .
+
+
+C:\Users\alan.LOQ_2\noticiero-app\api\chat.js
+  5:19  error  'process' is not defined  no-undef
+  5:45  error  'process' is not defined  no-undef
+
+C:\Users\alan.LOQ_2\noticiero-app\src\App.jsx
+   77:12  error    'e' is defined but never used                                                                                                                             no-unused-vars
+  255:14  error    'error' is defined but never used                                                                                                                         no-unused-vars
+  311:6   warning  React Hook useEffect has missing dependencies: 'navigate', 'selectedArticle', and 'showNotification'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  351:9   error    'err' is defined but never used                                                                                                                           no-unused-vars
+  356:6   warning  React Hook useEffect has a missing dependency: 'articles.length'. Either include it or remove the dependency array                                        react-hooks/exhaustive-deps
+  456:14  error    'error' is defined but never used                                                                                                                         no-unused-vars
+  552:16  error    'error' is defined but never used                                                                                                                         no-unused-vars
+  575:14  error    'error' is defined but never used                                                                                                                         no-unused-vars
+  606:14  error    'error' is defined but never used                                                                                                                         no-unused-vars
+  625:14  error    'error' is defined but never used                                                                                                                         no-unused-vars
+
+C:\Users\alan.LOQ_2\noticiero-app\src\pages\ArticleView.jsx
+  58:26  error  'error' is defined but never used  no-unused-vars
+
+✖ 13 problems (11 errors, 2 warnings)
+

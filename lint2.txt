@@ -1,0 +1,17 @@
+
+> noticiero-app@0.0.0 lint
+> eslint .
+
+
+C:\Users\alan.LOQ_2\noticiero-app\src\App.jsx
+   16:76  error    'signInAnonymously' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                                                                            no-unused-vars
+  315:6   warning  React Hook useEffect has missing dependencies: 'navigate', 'selectedArticle', and 'showNotification'. Either include them or remove the dependency array            react-hooks/exhaustive-deps
+  341:6   warning  React Hook useEffect has missing dependencies: 'liveArticles.length', 'loadedPages', and 'pastArticles.length'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  387:6   warning  React Hook useEffect has a missing dependency: 'fetchNextPage'. Either include it or remove the dependency array                                                    react-hooks/exhaustive-deps
+
+C:\Users\alan.LOQ_2\noticiero-app\src\pages\ArticleView.jsx
+  278:42  error  'isCompressingComment' is not defined  no-undef
+  287:65  error  'isCompressingComment' is not defined  no-undef
+
+✖ 6 problems (3 errors, 3 warnings)
+

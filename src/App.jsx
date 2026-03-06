@@ -844,6 +844,7 @@ export default function App() {
               handleDelete={handleDelete}
               setFullScreenImage={setFullScreenImage}
               renderArticleContent={renderArticleContent}
+              liveArticles={liveArticles}
               editingCommentId={editingCommentId}
               editCommentAuthor={editCommentAuthor}
               setEditCommentAuthor={setEditCommentAuthor}
