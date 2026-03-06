@@ -27,10 +27,10 @@ import ArticleCard from './components/ArticleCard';
 
 // --- 2. CONFIGURACIÓN DE FIREBASE ---
 const firebaseConfig = {
-  apiKey: "AIzaSyDa8-5p5ZyxZUQ1R303KixjLmnDiFAA-1Y",
-  authDomain: "myxd-26265.firebaseapp.com",
-  projectId: "myxd-26265",
-  appId: "1:202016124459:web:19d6308e200f8d4aa4046e"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
 const app = initializeApp(firebaseConfig);
