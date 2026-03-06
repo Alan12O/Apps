@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Loader2, FileText } from 'lucide-react';
 import ArticleCard from '../components/ArticleCard';
@@ -20,6 +20,10 @@ export default function Home({
     fetchNextPage,
     setMaxAutoLoadPages
 }) {
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, []);
+
     return (
         <div className="animate-in fade-in duration-500 flex flex-col min-h-[calc(100vh-200px)]">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 flex-grow">

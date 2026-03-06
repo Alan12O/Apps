@@ -78,6 +78,10 @@ export default function ArticleView({
         fetchArticle();
     }, [id, initialArticle, navigate, db]);
 
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, [id, selectedArticle?.id]);
+
     const relatedArticles = selectedArticle
         ? liveArticles.filter(a => a.id !== selectedArticle.id).slice(0, 3)
         : [];
