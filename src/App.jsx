@@ -213,15 +213,16 @@ export default function App() {
       });
 
       if (!response.ok) {
-        throw new Error('Error en el servidor de IA');
+        let errStr = "Error del servidor de IA";
+        try { const errData = await response.json(); errStr = errData.error || errStr; } catch { /* ignore */ }
+        throw new Error(errStr);
       }
 
       const data = await response.json();
       return data.respuesta;
 
     } catch (err) {
-      console.error("Error conectando con el Proxy de IA:", err);
-      throw new Error("PROXY_ERROR");
+      throw new Error(err.message || "Error de red al contactar al proxy");
     }
   };
 
@@ -256,8 +257,8 @@ export default function App() {
       } else {
         showNotification("La IA no devolvió respuesta. Intenta de nuevo.", "error");
       }
-    } catch {
-      showNotification("Error de conexión con el servidor IA. Revisa tu internet.", "error");
+    } catch (error) {
+      showNotification(error.message || "Error de conexión con IA.", "error");
     } finally {
       setActiveAiBlockId(null);
     }
@@ -272,17 +273,9 @@ export default function App() {
         setIsAdmin(user.email === "admin@ntrzacatecas.com");
         setAuthError(null);
       } else {
-        // Usuario desconectado...
+        // Usuario desconectado intencionalmente o sin sesión...
         setCurrentUser(null);
         setIsAdmin(false);
-        try {
-          // Breve retraso...
-          await new Promise(r => setTimeout(r, 500));
-          await signInAnonymously(auth);
-        } catch (error) {
-          console.error("Error reconexión anónima:", error);
-          setAuthError("Error de conexión. Intenta recargar la página.");
-        }
       }
     });
     return () => unsubscribe();
