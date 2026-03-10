@@ -99,7 +99,7 @@ export default function Editor({
                                             max="100"
                                             value={imagePosition}
                                             onChange={(e) => setImagePosition(Number(e.target.value))}
-                                            className="w-full h-2 rounded-lg accent-blue-900 cursor-pointer"
+                                            className="w-full h-2 rounded-lg accent-blue-900 cursor-pointer touch-none"
                                         />
                                         <div className="flex justify-between text-[10px] text-gray-400 mt-1">
                                             <span>Arriba</span>
