@@ -95,10 +95,17 @@ export default function ArticleView({
     const [isTransitioning, setIsTransitioning] = useState(false);
     const db = getFirestore();
 
+    const prevIdRef = React.useRef(id);
+
     useEffect(() => {
-        // Mostrar skeleton al cambiar de noticia
-        setIsTransitioning(true);
-        setSelectedArticle(null);
+        const idChanged = prevIdRef.current !== id;
+        prevIdRef.current = id;
+
+        // Solo mostrar skeleton si cambiamos a una noticia diferente
+        if (idChanged) {
+            setIsTransitioning(true);
+            setSelectedArticle(null);
+        }
 
         const fetchArticle = async () => {
             if (!initialArticle && id) {
@@ -119,8 +126,12 @@ export default function ArticleView({
             } else {
                 setSelectedArticle(initialArticle);
                 setIsLoadingFromUrl(false);
-                // Pequeño delay para que el skeleton se vea al navegar entre noticias
-                setTimeout(() => setIsTransitioning(false), 250);
+                // Skeleton solo al navegar a otra noticia, no al actualizar datos
+                if (idChanged) {
+                    setTimeout(() => setIsTransitioning(false), 250);
+                } else {
+                    setIsTransitioning(false);
+                }
             }
         };
         fetchArticle();
