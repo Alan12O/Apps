@@ -315,8 +315,6 @@ export default function App() {
   }, [location.pathname]);
 
   useEffect(() => {
-    if (!currentUser) return;
-
     if (liveArticles.length === 0 && pastArticles.length === 0) setLoading(true);
 
     const q = query(collection(db, "noticias"), orderBy("timestamp", "desc"), limit(ARTICLES_PER_PAGE));
@@ -338,7 +336,7 @@ export default function App() {
     }, () => setLoading(false));
 
     return () => unsubscribe();
-  }, [currentUser]); // Eliminado displayLimit y loadedPages para mantener 1 subs
+  }, []); // Se carga sin requerir autenticación
 
   useEffect(() => {
     const map = new Map();
@@ -387,7 +385,6 @@ export default function App() {
   }, [hasMore, loadedPages, maxAutoLoadPages, isFetchingMore, lastVisible]);
 
   useEffect(() => {
-    if (!currentUser) return;
     const configRef = doc(db, "config", "general");
     const unsubscribe = onSnapshot(configRef, (docSnap) => {
       const isMaint = docSnap.exists() && docSnap.data().isMaintenanceMode === true;
@@ -416,7 +413,7 @@ export default function App() {
       }
     }, () => setCheckingMaintenance(false));
     return () => unsubscribe();
-  }, [currentUser]);
+  }, []); // Se carga sin requerir autenticación
 
   useEffect(() => {
     // Título de la página
