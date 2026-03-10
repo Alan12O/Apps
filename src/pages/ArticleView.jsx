@@ -46,6 +46,7 @@ const ArticleSkeleton = () => (
 
 export default function ArticleView({
     selectedArticle: initialArticle,
+    currentUser,
     liveArticles = [], // Recibimos todas las noticias para filtrar las últimas
     ntrBlue,
     ntrText,
@@ -268,7 +269,8 @@ export default function ArticleView({
                                                             </button>
                                                         </div>
                                                     )}
-                                                    {isAdmin && (
+                                                    {/* Botón editar: visible para el creador del comentario o admin */}
+                                                    {(isAdmin || (currentUser && comment.creatorId === currentUser.uid)) && (
                                                         <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                             <button
                                                                 aria-label="Editar Comentario"
@@ -278,14 +280,16 @@ export default function ArticleView({
                                                             >
                                                                 <Edit size={14} />
                                                             </button>
-                                                            <button
-                                                                aria-label="Borrar Comentario"
-                                                                onClick={() => handleDeleteComment(comment)}
-                                                                className="text-red-400 hover:text-red-600 bg-white shadow-sm border border-red-100 transition-colors p-1.5 rounded"
-                                                                title="Borrar Comentario"
-                                                            >
-                                                                <Trash2 size={14} />
-                                                            </button>
+                                                            {isAdmin && (
+                                                                <button
+                                                                    aria-label="Borrar Comentario"
+                                                                    onClick={() => handleDeleteComment(comment)}
+                                                                    className="text-red-400 hover:text-red-600 bg-white shadow-sm border border-red-100 transition-colors p-1.5 rounded"
+                                                                    title="Borrar Comentario"
+                                                                >
+                                                                    <Trash2 size={14} />
+                                                                </button>
+                                                            )}
                                                         </div>
                                                     )}
                                                 </div>

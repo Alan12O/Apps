@@ -589,6 +589,7 @@ export default function App() {
     try {
       const newComment = {
         id: Date.now(), author: commentName, text: commentText, image: commentImage || null, avatar: commentAvatar || null,
+        creatorId: currentUser.uid,
         date: new Date().toLocaleDateString('es-MX', { hour: '2-digit', minute: '2-digit' })
       };
       await updateDoc(doc(db, "noticias", selectedArticle.id), { comments: arrayUnion(newComment) });
@@ -842,6 +843,7 @@ export default function App() {
           <Route path="/noticia/:id" element={
             <ArticleView
               selectedArticle={selectedArticle}
+              currentUser={currentUser}
               ntrBlue={ntrBlue}
               ntrText={ntrText}
               isAdmin={isAdmin}
