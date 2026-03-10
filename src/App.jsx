@@ -199,6 +199,11 @@ export default function App() {
   const handleBlockImageUpload = async (e, blockId) => {
     const file = e.target.files[0];
     if (file) {
+      if (!file.type.startsWith('image/')) {
+        showNotification("Por favor, sube un archivo de imagen válido", "error");
+        e.target.value = '';
+        return;
+      }
       setIsCompressing(true);
       const res = await compressImage(file);
       updateBlockValue(blockId, res);
@@ -510,6 +515,11 @@ export default function App() {
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (file) {
+      if (!file.type.startsWith('image/')) {
+        showNotification("Por favor, sube un archivo de imagen válido", "error");
+        e.target.value = '';
+        return;
+      }
       setIsCompressing(true);
       const res = await compressImage(file);
       setImage(res);
@@ -604,6 +614,11 @@ export default function App() {
   const handleCommentImageUpload = async (e) => {
     const file = e.target.files[0];
     if (file) {
+      if (!file.type.startsWith('image/')) {
+        showNotification("Por favor, sube un archivo de imagen válido", "error");
+        e.target.value = '';
+        return;
+      }
       setIsCompressingComment(true);
       const res = await compressImage(file);
       setCommentImage(res);
@@ -614,6 +629,11 @@ export default function App() {
   const handleCommentAvatarUpload = async (e) => {
     const file = e.target.files[0];
     if (file) {
+      if (!file.type.startsWith('image/')) {
+        showNotification("Por favor, sube un archivo de imagen válido", "error");
+        e.target.value = '';
+        return;
+      }
       setIsCompressingComment(true);
       // Podemos usar el mismo conversor base64 de 800px para evitar peso
       const res = await compressImage(file);
@@ -625,6 +645,11 @@ export default function App() {
   const handleEditCommentImageUpload = async (e) => {
     const file = e.target.files[0];
     if (file) {
+      if (!file.type.startsWith('image/')) {
+        showNotification("Por favor, sube un archivo de imagen válido", "error");
+        e.target.value = '';
+        return;
+      }
       setIsCompressingComment(true);
       const res = await compressImage(file);
       setEditCommentImage(res);
@@ -635,6 +660,11 @@ export default function App() {
   const handleEditCommentAvatarUpload = async (e) => {
     const file = e.target.files[0];
     if (file) {
+      if (!file.type.startsWith('image/')) {
+        showNotification("Por favor, sube un archivo de imagen válido", "error");
+        e.target.value = '';
+        return;
+      }
       setIsCompressingComment(true);
       const res = await compressImage(file);
       setEditCommentAvatar(res);
