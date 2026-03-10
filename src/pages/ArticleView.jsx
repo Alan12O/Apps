@@ -102,7 +102,7 @@ export default function ArticleView({
         const idChanged = prevIdRef.current !== id;
         prevIdRef.current = id;
 
-        // Solo mostrar skeleton si cambiamos a una noticia diferente
+        // Al cambiar de noticia: mostrar skeleton inmediatamente y limpiar el artículo viejo
         if (idChanged) {
             setIsTransitioning(true);
             setSelectedArticle(null);
@@ -110,13 +110,14 @@ export default function ArticleView({
 
         const fetchArticle = async () => {
             if (!initialArticle && id) {
+                // Llegó directo por URL sin pasar por App.jsx → cargar desde Firestore
                 try {
                     const docRef = doc(db, "noticias", id);
                     const docSnap = await getDoc(docRef);
                     if (docSnap.exists()) {
                         setSelectedArticle({ id: docSnap.id, ...docSnap.data() });
                     } else {
-                        navigate('/'); // Si borraron la noticia vuelve a inicio
+                        navigate('/');
                     }
                 } catch {
                     navigate('/');
@@ -124,15 +125,15 @@ export default function ArticleView({
                     setIsLoadingFromUrl(false);
                     setIsTransitioning(false);
                 }
-            } else {
-                setSelectedArticle(initialArticle);
-                setIsLoadingFromUrl(false);
-                // Skeleton solo al navegar a otra noticia, no al actualizar datos
-                if (idChanged) {
-                    setTimeout(() => setIsTransitioning(false), 250);
-                } else {
+            } else if (initialArticle) {
+                if (initialArticle.id === id) {
+                    // El artículo de App.jsx ya es el correcto → mostrarlo
+                    setSelectedArticle(initialArticle);
+                    setIsLoadingFromUrl(false);
                     setIsTransitioning(false);
                 }
+                // Si initialArticle.id !== id: aún llega el artículo viejo, ignorarlo
+                // El skeleton se queda visible hasta que initialArticle se actualice al correcto
             }
         };
         fetchArticle();
