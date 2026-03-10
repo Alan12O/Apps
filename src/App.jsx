@@ -13,7 +13,7 @@ import {
   getFirestore, collection, addDoc, onSnapshot, getDocs, startAfter,
   deleteDoc, doc, updateDoc, arrayUnion, arrayRemove, query, orderBy, limit, getDoc
 } from "firebase/firestore";
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, signInAnonymously } from "firebase/auth";
 
 // --- IMPORTACIÓN DE PÁGINAS Y COMPONENTES ---
 import Terms from './pages/Terms';
@@ -275,14 +275,20 @@ export default function App() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // Usuario conectado...
+        // Usuario conectado (admin con email o visitante anónimo)
         setCurrentUser(user);
         setIsAdmin(user.email === "admin@ntrzacatecas.com");
         setAuthError(null);
       } else {
-        // Usuario desconectado intencionalmente o sin sesión...
-        setCurrentUser(null);
-        setIsAdmin(false);
+        // Sin sesión: iniciar sesión anónima automáticamente
+        // Esto da un UID único a cada visitante para poder publicar y comentar
+        try {
+          await signInAnonymously(auth);
+        } catch (err) {
+          console.error("Error al iniciar sesión anónima:", err);
+          setCurrentUser(null);
+          setIsAdmin(false);
+        }
       }
     });
     return () => unsubscribe();
