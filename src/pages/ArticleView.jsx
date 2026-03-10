@@ -4,6 +4,46 @@ import { ArrowLeft, Maximize2, User, Calendar, Lock, Edit, MessageSquare, ImageI
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import ArticleCard from '../components/ArticleCard'; // Importante para renderizar las últimas noticias
 
+// Skeleton de una línea de texto
+const SkeletonLine = ({ w = 'w-full' }) => (
+    <div className={`h-4 bg-gray-200 animate-pulse rounded ${w}`} />
+);
+
+// Skeleton completo del artículo
+const ArticleSkeleton = () => (
+    <div className="animate-pulse">
+        {/* Imagen de portada */}
+        <div className="h-64 md:h-96 bg-gray-200 w-full" />
+        <div className="p-8 md:p-12">
+            {/* Categoría */}
+            <div className="h-5 w-24 bg-gray-200 rounded-full mb-4" />
+            {/* Título */}
+            <div className="h-8 bg-gray-200 rounded w-full mb-3" />
+            <div className="h-8 bg-gray-200 rounded w-3/4 mb-6" />
+            {/* Autor y fecha */}
+            <div className="flex gap-4 mb-10">
+                <div className="h-4 w-28 bg-gray-200 rounded" />
+                <div className="h-4 w-28 bg-gray-200 rounded" />
+            </div>
+            {/* Párrafos del contenido */}
+            <div className="space-y-3 mb-4">
+                <SkeletonLine />
+                <SkeletonLine />
+                <SkeletonLine w="w-5/6" />
+            </div>
+            <div className="space-y-3 mb-4">
+                <SkeletonLine />
+                <SkeletonLine />
+                <SkeletonLine w="w-4/5" />
+            </div>
+            <div className="space-y-3">
+                <SkeletonLine />
+                <SkeletonLine w="w-3/5" />
+            </div>
+        </div>
+    </div>
+);
+
 export default function ArticleView({
     selectedArticle: initialArticle,
     liveArticles = [], // Recibimos todas las noticias para filtrar las últimas
@@ -52,9 +92,14 @@ export default function ArticleView({
     const { id } = useParams();
     const [selectedArticle, setSelectedArticle] = useState(initialArticle);
     const [isLoadingFromUrl, setIsLoadingFromUrl] = useState(!initialArticle);
+    const [isTransitioning, setIsTransitioning] = useState(false);
     const db = getFirestore();
 
     useEffect(() => {
+        // Mostrar skeleton al cambiar de noticia
+        setIsTransitioning(true);
+        setSelectedArticle(null);
+
         const fetchArticle = async () => {
             if (!initialArticle && id) {
                 try {
@@ -69,10 +114,13 @@ export default function ArticleView({
                     navigate('/');
                 } finally {
                     setIsLoadingFromUrl(false);
+                    setIsTransitioning(false);
                 }
             } else {
                 setSelectedArticle(initialArticle);
                 setIsLoadingFromUrl(false);
+                // Pequeño delay para que el skeleton se vea al navegar entre noticias
+                setTimeout(() => setIsTransitioning(false), 250);
             }
         };
         fetchArticle();
@@ -89,11 +137,8 @@ export default function ArticleView({
     return (
         <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-right-8 duration-500">
             <button aria-label="Volver a la página principal" onClick={() => navigate('/')} className="m-6 flex items-center gap-2 text-gray-500 hover:text-blue-900 transition-colors font-bold"><ArrowLeft size={20} /> Volver</button>
-            {isLoadingFromUrl ? (
-                <div className="p-24 text-center text-gray-500 flex flex-col items-center">
-                    <Loader2 className="animate-spin mb-4 text-blue-900" size={48} />
-                    <p className="font-bold">Cargando noticia...</p>
-                </div>
+            {isTransitioning || isLoadingFromUrl ? (
+                <ArticleSkeleton />
             ) : selectedArticle ? (
                 <>
                     <article>
