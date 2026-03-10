@@ -16,7 +16,7 @@ export default function ArticleCard({
         <article className="bg-white rounded-xl shadow-sm hover:shadow-2xl transition-all border group cursor-pointer flex flex-col h-full relative">
             <Link to={`/noticia/${article.id}`} aria-label={`Leer nota completa sobre: ${article.title}`} className="block h-full cursor-pointer flex-grow flex flex-col">
                 <div className="relative h-56 overflow-hidden">
-                    <img src={article.image} alt={article.title} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+                    <img src={article.image} alt={article.title} className="w-full h-full object-cover transition-transform group-hover:scale-105" style={{ objectPosition: `center ${article.imagePosition ?? 50}%` }} />
                     <div className="absolute top-4 left-4"><span className={`${ntrBlue} text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg uppercase`}>{article.category}</span></div>
                 </div>
                 <div className="p-6 flex-grow flex flex-col justify-between">

@@ -100,6 +100,7 @@ export default function App() {
   const [category, setCategory] = useState('General');
   const [author, setAuthor] = useState('Anónimo');
   const [image, setImage] = useState('');
+  const [imagePosition, setImagePosition] = useState(50);
   const [isCompressing, setIsCompressing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -522,6 +523,7 @@ export default function App() {
     setTitle(article.title);
     setCategory(article.category);
     setImage(article.image);
+    setImagePosition(article.imagePosition ?? 50);
     setAuthor(article.author || "Anónimo");
     setContentBlocks(Array.isArray(article.content) ? article.content : [{ id: Date.now(), type: 'text', value: article.content }]);
     navigate('/redaccion');
@@ -534,7 +536,7 @@ export default function App() {
     const finalImage = image || "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&auto=format&fit=crop&q=60";
     try {
       const basePayload = {
-        title, category, image: finalImage, content: contentBlocks, author: author.trim() || "Anónimo",
+        title, category, image: finalImage, imagePosition, content: contentBlocks, author: author.trim() || "Anónimo",
         date: new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' }),
         timestamp: Date.now()
       };
@@ -577,7 +579,7 @@ export default function App() {
   };
 
   const resetForm = () => {
-    setEditingId(null); setTitle(''); setImage(''); setCategory('General'); setAuthor('Anónimo');
+    setEditingId(null); setTitle(''); setImage(''); setImagePosition(50); setCategory('General'); setAuthor('Anónimo');
     setContentBlocks([{ id: Date.now(), type: 'text', value: '' }]);
   };
 
@@ -813,6 +815,8 @@ export default function App() {
               handleImageUpload={handleImageUpload}
               presetImages={presetImages}
               setImage={setImage}
+              imagePosition={imagePosition}
+              setImagePosition={setImagePosition}
               getRandomImageUrl={getRandomImageUrl}
               contentBlocks={contentBlocks}
               updateBlockValue={updateBlockValue}

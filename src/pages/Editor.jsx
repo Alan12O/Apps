@@ -18,6 +18,8 @@ export default function Editor({
     handleImageUpload,
     presetImages,
     setImage,
+    imagePosition,
+    setImagePosition,
     getRandomImageUrl,
     contentBlocks,
     updateBlockValue,
@@ -70,14 +72,42 @@ export default function Editor({
                                     </div>
                                 </div>
                             ) : (
-                                <div className="relative h-64 w-full rounded-lg overflow-hidden group shadow-lg">
-                                    <img src={image} alt="Preview" className="w-full h-full object-cover" />
-                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                        <button type="button" aria-label="Eliminar imagen de portada" onClick={() => setImage('')} className="bg-white text-red-600 px-4 py-2 rounded-full font-bold shadow-lg transform hover:scale-105 transition-transform flex items-center gap-2">
-                                            <Trash2 size={16} /> Cambiar imagen
-                                        </button>
+                                <>
+                                    <div className="relative group rounded-lg overflow-hidden shadow-lg">
+                                        <div className="relative h-64 w-full overflow-hidden">
+                                            <img
+                                                src={image}
+                                                alt="Preview"
+                                                className="w-full h-full object-cover"
+                                                style={{ objectPosition: `center ${imagePosition}%` }}
+                                            />
+                                        </div>
+                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                            <button type="button" aria-label="Eliminar imagen de portada" onClick={() => setImage('')} className="bg-white text-red-600 px-4 py-2 rounded-full font-bold shadow-lg transform hover:scale-105 transition-transform flex items-center gap-2">
+                                                <Trash2 size={16} /> Cambiar imagen
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
+                                    <div className="mt-3 px-1">
+                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1 flex items-center justify-between">
+                                            <span>Posición del recorte en portada</span>
+                                            <span className="font-normal text-gray-400">{imagePosition}%</span>
+                                        </label>
+                                        <input
+                                            type="range"
+                                            min="0"
+                                            max="100"
+                                            value={imagePosition}
+                                            onChange={(e) => setImagePosition(Number(e.target.value))}
+                                            className="w-full h-2 rounded-lg accent-blue-900 cursor-pointer"
+                                        />
+                                        <div className="flex justify-between text-[10px] text-gray-400 mt-1">
+                                            <span>Arriba</span>
+                                            <span>Centro</span>
+                                            <span>Abajo</span>
+                                        </div>
+                                    </div>
+                                </>
                             )}
                         </div>
                     </div>
